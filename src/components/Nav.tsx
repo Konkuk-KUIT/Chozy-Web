@@ -3,14 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
-import homeOn from "../assets/Nav/home-on.svg";
-import homeOff from "../assets/Nav/home-off.svg";
-import commOn from "../assets/Nav/comm-on.svg";
-import commOff from "../assets/Nav/comm-off.svg";
-import heartOn from "../assets/Nav/heart-on.svg";
-import heartOff from "../assets/Nav/heart-off.svg";
-import myOn from "../assets/Nav/my-on.svg";
-import myOff from "../assets/Nav/my-off.svg";
+import homeOn from "../assets/nav/home-on.svg";
+import homeOff from "../assets/nav/home-off.svg";
+import commOn from "../assets/nav/comm-on.svg";
+import commOff from "../assets/nav/comm-off.svg";
+import heartOn from "../assets/nav/heart-on.svg";
+import heartOff from "../assets/nav/heart-off.svg";
+import myOn from "../assets/nav/my-on.svg";
+import myOff from "../assets/nav/my-off.svg";
 
 type NavItem = {
   key: string;
@@ -24,6 +24,7 @@ type NavItem = {
 export default function Nav() {
   const { pathname } = useLocation();
 
+  // 아래 스크롤: nav바 숨김, 위로 스크롤: nav바 보이게 -> 화면 어느정도 스크롤 될 때 테스트 필요!
   const [visible, setVisible] = useState(true);
   const lastYRef = useRef(0);
   const THRESHOLD = 8;
