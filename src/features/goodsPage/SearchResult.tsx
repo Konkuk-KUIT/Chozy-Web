@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import SearchBar2 from "../../components/SearchBar2";
-import Filter, { type SortKey } from "./components/Filter";
+import Sort, { type SortKey } from "./components/Sort";
 import Product from "./components/Product";
 import examProd from "../../assets/goodsPage/examProd.svg";
 
@@ -82,7 +82,7 @@ export default function SearchResult() {
               전체 310개
             </span>
             {/*추후 서버 연동 시 전체 상품 개수 받아와서 위 코드 수정 */}
-            <Filter value={sort} onChange={setSort} />
+            <Sort value={sort} onChange={setSort} />
           </div>
           <p className="text-[#B5B5B5] text-[14px] font-medium">
             상품을 클릭하면 해당 상품 사이트로 이동합니다.
