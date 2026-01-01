@@ -74,15 +74,15 @@ export default function SearchBar2() {
   };
 
   return (
-    <header className="fixed top-0 z-50 w-full bg-white pt-[9px] px-4 pb-3">
+    <header className="absolute top-0 z-50 w-full bg-white pt-[9px] px-4 pb-3">
       <div className="flex flex-row gap-3 items-center justify-center">
-        <button type="button" className="w-6 h-6" onClick={() => navigate(-1)}>
+        <button type="button" className="w-6 h-6" onClick={() => navigate("/")}>
           <img src={back} alt="이전페이지" />
         </button>
 
         <div
           className={`
-            w-full rounded-[40px] px-4 py-3 flex flex-row items-center justify-between
+            w-full h-[48px] rounded-[40px] px-4 py-3 flex flex-row items-center justify-between
             ${isActive ? "border border-[#66021F]" : "border border-[#DADADA]"}
           `}
         >
@@ -96,7 +96,7 @@ export default function SearchBar2() {
               if (e.key === "Enter") handleSubmit();
             }}
             placeholder="검색어를 입력하세요."
-            className={`flex-1 outline-none bg-transparent text-[16px] font-medium
+            className={`h-[48px] flex-1 outline-none bg-transparent text-[16px] font-medium
               placeholder:text-[#B9B9B9] focus:placeholder:text-[#191919]
               whitespace-nowrap overflow-hidden
               ${isCategoryMode && !isActive ? "text-[#66021F]" : "text-[#191919]"}

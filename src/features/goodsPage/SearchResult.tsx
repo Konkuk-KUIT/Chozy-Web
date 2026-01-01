@@ -106,12 +106,12 @@ export default function SearchResult() {
   const isEmpty = !loading && productList.length === 0;
 
   return (
-    <>
+    <div className="h-full bg-white">
       <SearchBar2 />
       {/* 상품 검색 화면 완성 시 검색창 누르면 상품 검색 화면으로 이동 추가 */}
-      <div className="pt-[68px]">
+      <div className="h-full overflow-y-auto scrollbar-hide pt-[68px]">
         {/* 추후 필터 컴포넌트 삽입 */}
-        <div className="h-1" />
+        <div className="h-1 bg-[#f9f9f9]" />
 
         {isEmpty ? (
           <div className="bg-white px-4">
@@ -160,6 +160,6 @@ export default function SearchResult() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }

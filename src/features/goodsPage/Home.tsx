@@ -127,86 +127,94 @@ function Home() {
 
   return (
     <>
-      <Header />
-      <main className="pt-[43px] flex flex-col gap-3">
-        {/* 검색창 && 인기검색어 */}
-        <div className="flex flex-col px-4 pt-2 pb-3 gap-3 shadow-[0_4px_10px_0_rgba(0,0,0,0.04)]">
-          <SearchBar />
+      <div className="relative h-full">
+        <Header />
+        <div className="scroll-available h-full overflow-y-auto overflow-x-hidden pt-[48px] scrollbar-hide">
+          <main className="flex flex-col gap-3">
+            {/* 검색창 && 인기검색어 */}
+            <div className="flex flex-col px-4 pt-2 pb-3 gap-3 shadow-[0_4px_10px_0_rgba(0,0,0,0.04)]">
+              <SearchBar />
 
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-[14px] whitespace-nowrap">
-              인기 검색어
-            </span>
+              <div className="flex items-center gap-3">
+                <span className="font-semibold text-[14px] whitespace-nowrap">
+                  인기 검색어
+                </span>
 
-            <div className="flex flex-1 min-w-0 gap-3 overflow-x-auto whitespace-nowrap scrollbar-hide">
-              {popularKeywords.map((keyword) => (
-                <button
-                  key={keyword}
+                <div className="flex flex-1 min-w-0 gap-3 overflow-x-auto whitespace-nowrap scrollbar-hide">
+                  {popularKeywords.map((keyword) => (
+                    <button
+                      key={keyword}
+                      onClick={() => {
+                        navigate(
+                          `/home/products?search=${encodeURIComponent(keyword)}`
+                        );
+                      }}
+                      className="flex-shrink-0 text-[#787878] text-[14px]"
+                    >
+                      {keyword}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 카테고리 선택 */}
+            <div className="w-full bg-white grid grid-cols-4 grid-rows-2 px-4 gap-2">
+              {categories.map((c) => (
+                <Category
+                  key={c.apiCategory}
+                  imgSrc={c.imgSrc}
+                  label={c.label}
                   onClick={() => {
-                    navigate(
-                      `/home/products?search=${encodeURIComponent(keyword)}`
-                    );
+                    navigate(`/home/products?category=${c.apiCategory}`);
                   }}
-                  className="flex-shrink-0 text-[#787878] text-[14px]"
-                >
-                  {keyword}
-                </button>
+                />
               ))}
             </div>
-          </div>
-        </div>
 
-        {/* 카테고리 선택 */}
-        <div className="w-full bg-white grid grid-cols-4 grid-rows-2 px-4 gap-2">
-          {categories.map((c) => (
-            <Category
-              key={c.apiCategory}
-              imgSrc={c.imgSrc}
-              label={c.label}
-              onClick={() => {
-                navigate(`/home/products?category=${c.apiCategory}`);
-              }}
-            />
-          ))}
-        </div>
+            {/* 상품 추천 */}
+            <div className="pt-4 px-4 flex flex-col bg-white gap-4">
+              <p className="font-semibold text-[16px]">이런 상품은 어떠세요?</p>
 
-        {/* 상품 추천 */}
-        <div className="pt-4 px-4 flex flex-col bg-white gap-4">
-          <p className="font-semibold text-[16px]">이런 상품은 어떠세요?</p>
+              {loadingProducts && (
+                <p className="text-[14px] text-[#787878]">
+                  상품 불러오는 중...
+                </p>
+              )}
 
-          {loadingProducts && (
-            <p className="text-[14px] text-[#787878]">상품 불러오는 중...</p>
-          )}
+              {!loadingProducts && productList.length === 0 && (
+                <p className="text-[14px] text-[#787878]">
+                  추천 상품이 없습니다.
+                </p>
+              )}
 
-          {!loadingProducts && productList.length === 0 && (
-            <p className="text-[14px] text-[#787878]">추천 상품이 없습니다.</p>
-          )}
-
-          <div
-            className="grid gap-x-1 gap-y-4 
+              <div
+                className="grid gap-x-1 gap-y-4 
             [grid-template-columns:repeat(auto-fill,minmax(177px,1fr))]
             justify-items-start"
-          >
-            {productList.map((p) => (
-              <Product
-                key={p.productId}
-                productId={p.productId}
-                imageUrl={p.imageUrl}
-                productUrl={p.productUrl}
-                name={p.name}
-                originalPrice={p.originalPrice}
-                discountRate={p.discountRate}
-                rating={p.rating}
-                reviewCount={p.reviewCount}
-                deliveryFee={p.deliveryFee}
-                status={p.status}
-                onToggleLike={handleToggleLike}
-              />
-            ))}
-          </div>
+              >
+                {productList.map((p) => (
+                  <Product
+                    key={p.productId}
+                    productId={p.productId}
+                    imageUrl={p.imageUrl}
+                    productUrl={p.productUrl}
+                    name={p.name}
+                    originalPrice={p.originalPrice}
+                    discountRate={p.discountRate}
+                    rating={p.rating}
+                    reviewCount={p.reviewCount}
+                    deliveryFee={p.deliveryFee}
+                    status={p.status}
+                    onToggleLike={handleToggleLike}
+                  />
+                ))}
+              </div>
+            </div>
+          </main>
         </div>
-      </main>
-      <Nav />
+        <Nav scrollTargetSelector=".scroll-available" />
+      </div>
     </>
   );
 }
