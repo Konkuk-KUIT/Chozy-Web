@@ -1,18 +1,17 @@
 // 상품페이지 검색 결과 화면 정렬 컴포넌트
 // 안될 경우 설치 -> npm i @radix-ui/react-dialog
-// 서버 연동 시 정렬 선택할 경우 어떻게 넘기고 받을지 고민해봐야함!
 import * as Dialog from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useState } from "react";
 import filter from "../../../assets/all/filter.svg";
 
-export type SortKey = "relevance" | "priceAsc" | "priceDesc" | "ratingDesc";
+export type SortKey = "RELEVANCE" | "PRICE_ASC" | "PRICE_DESC" | "RATING";
 
 const SORT_LABEL: Record<SortKey, string> = {
-  relevance: "관련순",
-  priceAsc: "낮은 가격순",
-  priceDesc: "높은 가격순",
-  ratingDesc: "별점순",
+  RELEVANCE: "관련순",
+  PRICE_ASC: "낮은 가격순",
+  PRICE_DESC: "높은 가격순",
+  RATING: "별점순",
 };
 
 type FilterProps = {
