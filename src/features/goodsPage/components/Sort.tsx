@@ -1,6 +1,5 @@
 // 상품페이지 검색 결과 화면 정렬 컴포넌트
 // 안될 경우 설치 -> npm i @radix-ui/react-dialog
-// 서버 연동 시 정렬 선택할 경우 어떻게 넘기고 받을지 고민해봐야함!
 import * as Dialog from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useState } from "react";

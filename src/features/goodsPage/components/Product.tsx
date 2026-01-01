@@ -6,13 +6,13 @@ type ProductProps = {
   productId: number;
   name: string;
   originalPrice: number;
-  discountRate: number; // 0이면 할인 없음
+  discountRate: number;
   imageUrl: string;
   productUrl: string;
   rating: number;
   reviewCount: number;
   deliveryFee: number;
-  status: boolean; // 좋아요(찜) 상태로 사용
+  status: boolean;
   onToggleLike?: (productId: number) => void;
 };
 
