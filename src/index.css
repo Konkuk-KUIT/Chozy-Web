@@ -1,19 +1,18 @@
 @import "tailwindcss";
 
-/* :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-} */
+#root {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
 a {
   font-weight: 500;
@@ -27,14 +26,9 @@ a:hover {
 body {
   font-family: Pretendard;
   background-color: #f9f9f9;
-}
-/* body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-} */
+  overflow: hidden;
+}
 
 h1 {
   font-size: 3.2em;
@@ -43,6 +37,23 @@ h1 {
 
 button {
   cursor: pointer;
+}
+
+.app-frame {
+  width: 390px;
+  height: 844px;
+  position: relative;
+  overflow-y: hidden;
+}
+
+/* 스크롤은 가능하지만 스크롤바는 숨김 */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE, Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
 }
 
 @media (prefers-color-scheme: light) {

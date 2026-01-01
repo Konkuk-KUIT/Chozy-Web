@@ -21,7 +21,11 @@ type NavItem = {
   match: (pathname: string) => boolean;
 };
 
-export default function Nav() {
+type NavProps = {
+  scrollTargetSelector?: string;
+};
+
+export default function Nav({ scrollTargetSelector = "" }: NavProps) {
   const { pathname } = useLocation();
 
   // 아래 스크롤: nav바 숨김, 위로 스크롤: nav바 보이게 -> 화면 어느정도 스크롤 될 때 테스트 필요!
@@ -30,32 +34,42 @@ export default function Nav() {
   const THRESHOLD = 8;
 
   useEffect(() => {
-    lastYRef.current = window.scrollY;
+    const target: HTMLElement | Window = scrollTargetSelector
+      ? (document.querySelector(scrollTargetSelector) as HTMLElement)
+      : window;
+
+    if (!target) return;
+
+    const getY = () =>
+      target === window ? window.scrollY : (target as HTMLElement).scrollTop;
+
+    lastYRef.current = getY();
 
     const onScroll = () => {
-      const y = window.scrollY;
+      const y = getY();
       const diff = y - lastYRef.current;
 
       if (Math.abs(diff) < THRESHOLD) return;
 
-      if (diff > 0) setVisible(false);
-      else setVisible(true);
+      if (diff > 0)
+        setVisible(false); // down
+      else setVisible(true); // up
 
       lastYRef.current = y;
     };
 
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    target.addEventListener("scroll", onScroll as any, { passive: true });
+    return () => target.removeEventListener("scroll", onScroll as any);
+  }, [scrollTargetSelector]);
 
   const items: NavItem[] = [
     {
       key: "home",
-      to: "/goods",
+      to: "/",
       label: "홈",
       onSrc: homeOn,
       offSrc: homeOff,
-      match: (p) => p.startsWith("/goods"),
+      match: (p) => p === "/",
     },
     {
       key: "community",
@@ -86,7 +100,7 @@ export default function Nav() {
   return (
     <nav
       className={[
-        "fixed inset-x-0 bottom-0 z-50",
+        "absolute inset-x-0 bottom-0 z-50",
         visible ? "translate-y-0" : "translate-y-full",
         "transition-transform duration-200 ease-out",
       ].join(" ")}
