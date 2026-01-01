@@ -27,7 +27,7 @@ export default function SearchBar2() {
     sourceParam === "category" && !focused && value ? `#${value}` : value;
 
   return (
-    <header className="fixed top-0 z-50 w-full bg-white pt-[9px] px-4 pb-3">
+    <header className="fixed top-0 left-1/2 -translate-x-1/2 z-50 w-[390px] bg-white pt-[9px] px-4 pb-3">
       <div className="flex flex-row gap-3 items-center justify-center">
         <button type="button" className="w-6 h-6" onClick={() => navigate(-1)}>
           <img src={back} alt="이전페이지" />

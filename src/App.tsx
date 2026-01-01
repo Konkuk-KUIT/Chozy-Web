@@ -1,21 +1,11 @@
 import AppRouter from "./app/AppRouter";
-// import "./App.css";
 
-function App() {
-  // const [count, setCount] = useState(0);
-
+export default function App() {
   return (
-    <>
-      {/* <h1>Chozy 웹 배포</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>vercel 사용 배포 테스트</p>
-      </div> */}
-      <AppRouter />
-    </>
+    <div className="min-h-screen bg-[#F2F2F2] flex justify-center">
+      <div className="w-[390px] min-h-screen bg-white relative overflow-hidden">
+        <AppRouter />
+      </div>
+    </div>
   );
 }
-
-export default App;

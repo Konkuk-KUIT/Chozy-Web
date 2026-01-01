@@ -4,8 +4,14 @@ import Sort, { type SortKey } from "./components/Sort";
 import Product from "./components/Product";
 import examProd from "../../assets/goodsPage/examProd.svg";
 
+import FilterSheet from "./components/filter/FIlterSheet";
+import type { FilterTab } from "./components/filter/types";
+
 export default function SearchResult() {
   const [sort, setSort] = useState<SortKey>("relevance");
+
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterDefaultTab, setFilterDefaultTab] = useState<FilterTab>("price");
 
   // 서버에서 데이터 받아오기전 상품 더미데이터
   // 검색 키워드 && 필터 && 정렬을 넘기고 한번에 배열로 데이터 받아오기..?
@@ -75,6 +81,40 @@ export default function SearchResult() {
       {/* 상품 검색 화면 완성 시 검색창 누르면 상품 검색 화면으로 이동 추가 */}
       <div className="pt-[68px]">
         {/* 추후 필터 컴포넌트 삽입 */}
+        {/* DEV ONLY: 필터 바텀시트 테스트용 */}
+        <div className="bg-white px-4 pt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setFilterDefaultTab("price");
+              setFilterOpen(true);
+            }}
+            className="px-3 py-2 text-[14px] font-medium bg-[#F2F2F2] rounded"
+          >
+            필터 테스트(가격)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setFilterDefaultTab("rating");
+              setFilterOpen(true);
+            }}
+            className="px-3 py-2 text-[14px] font-medium bg-[#F2F2F2] rounded"
+          >
+            필터 테스트(별점)
+          </button>
+        </div>
+
+        <FilterSheet
+          open={filterOpen}
+          onOpenChange={setFilterOpen}
+          defaultTab={filterDefaultTab}
+          onConfirm={(state) => {
+            console.log("필터 확인:", state);
+          }}
+        />
+
         <div className="h-1" />
         <div className="bg-white pt-4 px-4 flex flex-col gap-5">
           <div className="flex flex-row items-center justify-between">
