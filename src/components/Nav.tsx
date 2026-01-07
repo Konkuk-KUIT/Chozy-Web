@@ -97,6 +97,18 @@ export default function Nav({ scrollTargetSelector = "" }: NavProps) {
     },
   ];
 
+  const scrollTop = () => {
+    const target = scrollTargetSelector
+      ? (document.querySelector(scrollTargetSelector) as HTMLElement | null)
+      : null;
+
+    if (target) {
+      target.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   return (
     <nav
       className={[
@@ -111,7 +123,15 @@ export default function Nav({ scrollTargetSelector = "" }: NavProps) {
             const isActive = item.match(pathname);
             return (
               <li key={item.key} className="flex justify-center">
-                <NavLink to={item.to}>
+                <NavLink
+                  to={item.to}
+                  onClick={(e) => {
+                    if (isActive) {
+                      e.preventDefault();
+                      scrollTop();
+                    }
+                  }}
+                >
                   <img src={isActive ? item.onSrc : item.offSrc} alt="" />
                 </NavLink>
               </li>

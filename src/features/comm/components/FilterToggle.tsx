@@ -18,7 +18,7 @@ export default function FilterToggle({
   options,
   value,
   onChange,
-  allKey = "all",
+  allKey = "ALL",
   className = "",
 }: Props) {
   const selected = new Set(value);
