@@ -1,7 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import Home from "../features/goodsPage/Home";
 import SearchResult from "../features/goodsPage/SearchResult";
-import ReviewWrite from "../features/goodsPage/ReviewWrite";
+import ReviewWrite from "../features/comm/ReviewWrite";
 import CommMain from "../features/comm/CommMain";
 
 export default function AppRouter() {
