@@ -1,5 +1,5 @@
 // 커뮤니티 홈화면 탭바
-type TabKey = "recommend" | "follow";
+type TabKey = "RECOMMEND" | "FOLLOWING";
 
 interface TabBarProps {
   value: TabKey;
@@ -12,10 +12,10 @@ export default function TabBar({ value, onChange }: TabBarProps) {
       <div className="grid grid-cols-2">
         <button
           type="button"
-          onClick={() => onChange("recommend")}
+          onClick={() => onChange("RECOMMEND")}
           className={`h-[42px] text-[16px] border-b-1 p-[10px]
             ${
-              value === "recommend"
+              value === "RECOMMEND"
                 ? "text-[#66021F] font-semibold border-[#66021F]"
                 : "text-[#B5B5B5] border-transparent"
             }`}
@@ -24,10 +24,10 @@ export default function TabBar({ value, onChange }: TabBarProps) {
         </button>
         <button
           type="button"
-          onClick={() => onChange("follow")}
+          onClick={() => onChange("FOLLOWING")}
           className={`h-[42px] text-[16px] border-b-1 p-[10px]
             ${
-              value === "follow"
+              value === "FOLLOWING"
                 ? "text-[#66021F] font-semibold border-[#66021F]"
                 : "text-[#B5B5B5] border-transparent"
             }`}

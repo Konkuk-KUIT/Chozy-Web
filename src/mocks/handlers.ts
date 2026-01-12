@@ -59,7 +59,10 @@ const isCategory = (v: string | null): v is Category =>
   v === "AUTOMOTIVE";
 
 const isSort = (v: string | null): v is Sort =>
-  v === "RELEVANCE" || v === "PRICE_ASC" || v === "PRICE_DESC" || v === "RATING";
+  v === "RELEVANCE" ||
+  v === "PRICE_ASC" ||
+  v === "PRICE_DESC" ||
+  v === "RATING";
 
 const relevanceScore = (name: string, q: string) => {
   const idx = name.indexOf(q);
@@ -303,8 +306,7 @@ const PRODUCTS: ProductInternal[] = [
   },
 ];
 
-const RECENT_VIEWED: Product[] =
-  PRODUCTS.slice(0, 10).map(omitCategory);
+const RECENT_VIEWED: Product[] = PRODUCTS.slice(0, 10).map(omitCategory);
 
 const RECENT_KEYWORDS = [
   { keywordId: 101, keyword: "가을 상의" },
@@ -337,7 +339,12 @@ const POPULAR_KEYWORDS = [
   { keywordId: 210, keyword: "폰케이스", previousRank: 7, currentRank: 10 },
   { keywordId: 211, keyword: "니트 가디건", previousRank: 14, currentRank: 11 },
   { keywordId: 212, keyword: "니트 원피스", previousRank: 12, currentRank: 12 },
-  { keywordId: 213, keyword: "니아신아마이드", previousRank: 15, currentRank: 13 },
+  {
+    keywordId: 213,
+    keyword: "니아신아마이드",
+    previousRank: 15,
+    currentRank: 13,
+  },
   { keywordId: 214, keyword: "무선 이어폰", previousRank: 11, currentRank: 14 },
   { keywordId: 215, keyword: "향수", previousRank: 13, currentRank: 15 },
 ];
@@ -377,7 +384,10 @@ export const handlers = [
     const info = await request.json();
     console.log("MSW: 로그인 요청을 받았습니다:", info);
 
-    return HttpResponse.json({ message: "로그인 성공!", user: info }, { status: 201 });
+    return HttpResponse.json(
+      { message: "로그인 성공!", user: info },
+      { status: 201 }
+    );
   }),
 
   // 상품 목록 조회
@@ -387,7 +397,9 @@ export const handlers = [
     const url = new URL(request.url);
 
     const categoryParam = url.searchParams.get("category");
-    const searchParam = (url.searchParams.get("search") ?? "").replace(/^"|"$/g, "").trim();
+    const searchParam = (url.searchParams.get("search") ?? "")
+      .replace(/^"|"$/g, "")
+      .trim();
 
     const sortParam = url.searchParams.get("sort");
     const sort: Sort = isSort(sortParam) ? sortParam : "RELEVANCE";
@@ -407,18 +419,24 @@ export const handlers = [
       items = items.filter((p) => p.name.includes(searchParam));
     }
 
-    if (minPrice !== undefined) items = items.filter((p) => finalPrice(p) >= minPrice);
-    if (maxPrice !== undefined) items = items.filter((p) => finalPrice(p) <= maxPrice);
+    if (minPrice !== undefined)
+      items = items.filter((p) => finalPrice(p) >= minPrice);
+    if (maxPrice !== undefined)
+      items = items.filter((p) => finalPrice(p) <= maxPrice);
 
-    if (minRating !== undefined) items = items.filter((p) => p.rating >= minRating);
-    if (maxRating !== undefined) items = items.filter((p) => p.rating <= maxRating);
+    if (minRating !== undefined)
+      items = items.filter((p) => p.rating >= minRating);
+    if (maxRating !== undefined)
+      items = items.filter((p) => p.rating <= maxRating);
 
     if (sort === "PRICE_ASC") {
       items.sort((a, b) => finalPrice(a) - finalPrice(b));
     } else if (sort === "PRICE_DESC") {
       items.sort((a, b) => finalPrice(b) - finalPrice(a));
     } else if (sort === "RATING") {
-      items.sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount);
+      items.sort(
+        (a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount
+      );
     } else {
       if (searchParam) {
         items.sort((a, b) => {
@@ -429,7 +447,10 @@ export const handlers = [
         });
       } else {
         items.sort(
-          (a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount || a.productId - b.productId
+          (a, b) =>
+            b.rating - a.rating ||
+            b.reviewCount - a.reviewCount ||
+            a.productId - b.productId
         );
       }
     }
@@ -462,7 +483,9 @@ export const handlers = [
   // response: 최대 10개
   http.get("/home/search/recommed", ({ request }) => {
     const url = new URL(request.url);
-    const keyword = (url.searchParams.get("keyword") ?? "").replace(/^"|"$/g, "").trim();
+    const keyword = (url.searchParams.get("keyword") ?? "")
+      .replace(/^"|"$/g, "")
+      .trim();
 
     const filtered = keyword
       ? RECOMMEND_KEYWORDS.filter((k) => k.keyword.includes(keyword))
@@ -471,3 +494,160 @@ export const handlers = [
     return HttpResponse.json(ok(filtered.slice(0, 10)));
   }),
 ];
+
+// 커뮤니티 게시글 목록 조회
+type FeedTab = "RECOMMEND" | "FOLLOWING";
+type FeedContentType = "ALL" | "POST" | "REVIEW";
+
+type FeedUser = {
+  profileImg: string;
+  userName: string;
+  userId: string;
+};
+
+type PostContent = {
+  text: string;
+  contentImgs: string[];
+};
+
+type ReviewContent = {
+  vendor: string;
+  title: string;
+  rating: number;
+  text: string;
+  contentImgs: string[];
+  quoteContent?: {
+    vendor: string;
+    title: string;
+    rating: number;
+    text: string;
+    contentImgs: string[];
+  };
+};
+
+type FeedItemBase = {
+  feedId: number;
+  users: FeedUser;
+  reviewCount: number;
+  likeCount: number;
+  dislikeCount: number;
+  quoteCount: number;
+  isBookmarked: boolean;
+};
+
+type FeedItem =
+  | (FeedItemBase & { type: "POST"; content: PostContent })
+  | (FeedItemBase & { type: "REVIEW"; content: ReviewContent });
+
+const fail = () => ({
+  isSuccess: true,
+  code: 4000,
+  message: "요청에 실패했습니다.",
+  timestamp: new Date().toISOString(),
+});
+
+const isFeedTab = (v: string | null): v is FeedTab =>
+  v === "RECOMMEND" || v === "FOLLOWING";
+
+const isFeedContentType = (v: string | null): v is FeedContentType =>
+  v === "ALL" || v === "POST" || v === "REVIEW";
+
+const FEEDS: FeedItem[] = [
+  {
+    feedId: 1,
+    type: "POST",
+    users: {
+      profileImg: "https://cdn.example.com/users/12/profile.jpg",
+      userName: "이수아",
+      userId: "KUIT_PM",
+    },
+    content: {
+      text: "자력도 짱짱하고 디자인도 깔끔합니다. 로켓배송이라 다음 날 받아서 설치했네요 가격은 좀 있지만 제품은 좋아요~ 구매 추천합니다.",
+      contentImgs: ["/src/assets/goodsPage/examProd.svg"],
+    },
+    reviewCount: 67,
+    likeCount: 67,
+    dislikeCount: 67,
+    quoteCount: 67,
+    isBookmarked: false,
+  },
+  {
+    feedId: 2,
+    type: "REVIEW",
+    users: {
+      profileImg: "https://cdn.example.com/users/12/profile.jpg",
+      userName: "이수아",
+      userId: "KUIT_PM",
+    },
+    content: {
+      vendor: "알리",
+      title: "Toocki 67W GaN USB C 충전기",
+      rating: 4.0,
+      text: "자력도 짱짱하고 디자인도 깔끔합니다. 로켓배송이라 다음 날 받아서 설치했네요 가격은 좀 있지만 제품은 좋아요~ 구매 추천합니다.",
+      contentImgs: ["/src/assets/goodsPage/examProd.svg"],
+    },
+    reviewCount: 67,
+    likeCount: 67,
+    dislikeCount: 67,
+    quoteCount: 67,
+    isBookmarked: true,
+  },
+  {
+    feedId: 3,
+    type: "REVIEW",
+    users: {
+      profileImg: "https://cdn.example.com/users/12/profile.jpg",
+      userName: "이수아",
+      userId: "KUIT_PM",
+    },
+    content: {
+      vendor: "알리",
+      title: "Toocki 67W GaN USB C 충전기",
+      rating: 4.0,
+      text: "자력도 짱짱하고 디자인도 깔끔합니다. 로켓배송이라 다음 날 받아서 설치했네요 가격은 좀 있지만 제품은 좋아요~ 구매 추천합니다.",
+      contentImgs: [""],
+      quoteContent: {
+        vendor: "알리",
+        title: "Toocki 67W GaN USB C 충전기",
+        rating: 4.0,
+        text: "자력도 짱짱하고 디자인도 깔끔합니다. 로켓배송이라 다음 날 받아서 설치했네요 가격은 좀 있지만 제품은 좋아요~ 구매 추천합니다.",
+        contentImgs: ["/src/assets/goodsPage/examProd.svg"],
+      },
+    },
+    reviewCount: 67,
+    likeCount: 67,
+    dislikeCount: 67,
+    quoteCount: 67,
+    isBookmarked: true,
+  },
+];
+
+// 커뮤니티 피드 조회
+// path: /community/feeds?tab={tab}&contentType={contentType}
+// tab: RECOMMEND | FOLLOWING
+// contentType: ALL | POST | REVIEW
+handlers.push(
+  http.get("/community/feeds", ({ request }) => {
+    const url = new URL(request.url);
+
+    const tabParam = url.searchParams.get("tab");
+    const contentTypeParam = url.searchParams.get("contentType");
+
+    // 유효성 검사 실패 -> 실패 응답
+    if (!isFeedTab(tabParam) || !isFeedContentType(contentTypeParam)) {
+      return HttpResponse.json(fail(), { status: 400 });
+    }
+
+    // tab에 따라 다른 데이터 주고 싶으면 여기에서 분기 가능
+    // (일단은 동일 데이터 반환)
+    let items = [...FEEDS];
+
+    if (contentTypeParam === "POST") {
+      items = items.filter((f) => f.type === "POST");
+    } else if (contentTypeParam === "REVIEW") {
+      items = items.filter((f) => f.type === "REVIEW");
+    }
+
+    return HttpResponse.json(ok(items));
+  })
+);

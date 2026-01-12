@@ -1,48 +1,91 @@
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "./components/Header";
 import TabBar from "./components/TabBar";
 import FilterToggle, { type ToggleOption } from "./components/FilterToggle";
 import Nav from "../../components/Nav";
+import PostList from "./components/PostList";
 import WriteBtn from "./components/WriteBtn";
 import FloatingMenu from "./components/FloatingMenu";
 
 const OPTIONS: ToggleOption[] = [
-  { key: "all", label: "전체" },
-  { key: "chat", label: "사담" },
-  { key: "review", label: "리뷰" },
+  { key: "ALL", label: "전체" },
+  { key: "POST", label: "사담" },
+  { key: "REVIEW", label: "리뷰" },
 ];
+
+type Tab = "RECOMMEND" | "FOLLOWING";
+type ContentType = "ALL" | "POST" | "REVIEW";
 
 function CommMain() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<"recommend" | "follow">("recommend");
-  const [selected, setSelected] = useState<string[]>(["all", "chat", "review"]);
+  const [tab, setTab] = useState<Tab>("RECOMMEND");
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const [selected, setSelected] = useState<ContentType[]>([
+    "ALL",
+    "POST",
+    "REVIEW",
+  ]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const toggleMenu = () => setIsModalOpen((prev) => !prev);
 
+  const scrollTop = () => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollTop();
+  }, [tab]);
+
+  const contentType: ContentType = useMemo(() => {
+    const hasPost = selected.includes("POST");
+    const hasReview = selected.includes("REVIEW");
+    const hasAll = selected.includes("ALL");
+
+    if (hasAll || (hasPost && hasReview)) return "ALL";
+    if (hasPost) return "POST";
+    if (hasReview) return "REVIEW";
+    return "ALL";
+  }, [selected]);
+
+  const handleTabChange = (next: Tab) => {
+    if (next === tab) {
+      scrollTop();
+      return;
+    }
+    setTab(next);
+  };
   return (
-    <>
+    <div className="h-full flex flex-col">
       <div
         style={{ opacity: isModalOpen ? 0.5 : 1, transition: "opacity 0.2s" }}
       >
         <Header />
-        <TabBar value={tab} onChange={setTab} />
+        <TabBar value={tab} onChange={handleTabChange} />
         <FilterToggle
           options={OPTIONS}
           value={selected}
           onChange={(next) => {
-            setSelected(next);
+            setSelected(next as ContentType[]);
           }}
           className="px-4 py-[9px]"
         />
+      </div>
+      <div
+        ref={scrollRef}
+        className="scroll-available flex-1 overflow-y-auto scrollbar-hide"
+        style={{ opacity: isModalOpen ? 0.5 : 1, transition: "opacity 0.2s" }}
+      >
+        <PostList tab={tab} contentType={contentType} />
       </div>
       <div
         style={{ opacity: isModalOpen ? 0.5 : 1, transition: "opacity 0.2s" }}
       >
         <Nav scrollTargetSelector=".scroll-available" />
       </div>
-      배경 오버레이
       {isModalOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/40"
@@ -51,92 +94,7 @@ function CommMain() {
       )}
       <FloatingMenu isOpen={isModalOpen} />
       <WriteBtn onClick={toggleMenu} isOpen={isModalOpen} />
-      {/* 플로팅 버튼 그룹 */}
-      {/* {isModalOpen && (
-        <> */}
-      {/* 사담 작성하기 */}
-      {/* <div
-            className="flex items-center gap-2 z-50"
-            style={{
-              position: "fixed",
-              right: "16px",
-              bottom: "calc(62px + 16px + 40px + 8px + 40px + 8px)",
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "Pretendard",
-                fontWeight: 500,
-                fontSize: "16px",
-                lineHeight: "100%",
-                letterSpacing: "-2%",
-                color: "#FFFFFF",
-              }}
-            >
-              사담 작성하기
-            </span>
-            <button
-              className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg bg-white hover:bg-gray-100 transition-colors flex-shrink-0"
-              onClick={() => setIsModalOpen(false)}
-            >
-              <img src={reviewIcon} alt="리뷰" className="w-6 h-6" />
-            </button>
-          </div> */}
-      {/* 리뷰 작성하기 */}
-      {/* <div
-            className="flex items-center gap-2 z-50"
-            style={{
-              position: "fixed",
-              right: "16px",
-              bottom: "calc(62px + 16px + 40px + 8px)",
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "Pretendard",
-                fontWeight: 500,
-                fontSize: "16px",
-                lineHeight: "100%",
-                letterSpacing: "-2%",
-                color: "#FFFFFF",
-              }}
-            >
-              리뷰 작성하기
-            </span>
-            <button
-              className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg bg-white hover:bg-gray-100 transition-colors flex-shrink-0"
-              onClick={() => navigate("/review-write")}
-            >
-              <img src={reviewIcon} alt="리뷰" className="w-6 h-6" />
-            </button>
-          </div> */}
-      {/* X 버튼 */}
-      {/* <button
-            className="flex items-center justify-center w-10 h-10 rounded-full shadow-lg bg-white hover:bg-gray-100 transition-colors z-50"
-            style={{
-              position: "fixed",
-              bottom: "calc(62px + 16px)",
-              right: "16px",
-            }}
-            onClick={() => setIsModalOpen(false)}
-          >
-            <img src={xIcon} alt="닫기" className="w-6 h-6" />
-          </button>
-        </>
-      )} */}
-      {/* + 버튼 */}
-      {/* <button
-        className="fixed flex items-center justify-center w-10 h-10 rounded-full shadow-lg"
-        style={{
-          backgroundColor: "#66021F",
-          bottom: "calc(62px + 16px)",
-          right: "16px",
-        }}
-        onClick={() => setIsModalOpen(true)}
-      >
-        <img src={plusIcon} alt="+" className="w-6 h-6" />
-      </button> */}
-    </>
+    </div>
   );
 }
 
