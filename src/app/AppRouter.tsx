@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import Home from "../features/goodsPage/Home";
 import SearchResult from "../features/goodsPage/SearchResult";
+import ReviewWrite from "../features/goodsPage/ReviewWrite";
+import CommMain from "../features/comm/CommMain";
 
 export default function AppRouter() {
   return (
@@ -9,7 +11,8 @@ export default function AppRouter() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/home/products" element={<SearchResult />} />
-      <Route path="/community" element={<Home />} />
+      <Route path="/community" element={<CommMain />} />
+      <Route path="/review-write" element={<ReviewWrite />} />
       <Route path="/heart" element={<Home />} />
       <Route path="/mypage" element={<Home />} />
     </Routes>
