@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import starOffIcon from "../../assets/community/star-off.svg";
-import starOnIcon from "../../assets/community/star-on.svg";
 import backIcon from "../../assets/all/back.svg";
 import removeTextIcon from "../../assets/community/remove-text.svg";
-import cameraIcon from "../../assets/community/camera.svg";
-import closeImgIcon from "../../assets/community/close-img.svg";
 import checkIcon from "../../assets/community/check.svg";
+import HashtagInput from "./components/HashtagInput";
+import StarRating from "./components/StarRating";
+import ImageUpload from "./components/ImageUpload";
+import SubmitButton from "./components/SubmitButton";
 
 export default function ReviewWrite() {
   const navigate = useNavigate();
@@ -15,29 +15,77 @@ export default function ReviewWrite() {
   const [review, setReview] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [hashtags, setHashtags] = useState<string[]>([]);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleBack = () => {
     navigate(-1);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.currentTarget.files;
-    if (files) {
-      const newImages = Array.from(files).slice(0, 4 - images.length);
-      setImages([...images, ...newImages]);
+  const handleSubmit = async () => {
+    if (!isFormValid() || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      // 이미지 객체 생성
+      const imgArray = images.map((image) => ({
+        fileName: image.name,
+        contentType: image.type,
+      }));
+
+      const requestBody = {
+        productUrl: productLink,
+        rating: rating,
+        content: review,
+        img: imgArray,
+      };
+
+      const response = await fetch("/community/reviews/create", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data.isSuccess) {
+        setShowSuccess(true);
+        // 게시글 상세 페이지로 이동
+        setTimeout(() => {
+          navigate(`/community/reviews/${data.result.reviewId}`);
+        }, 2000);
+      } else {
+        setToastMessage(data.message || "리뷰 게시에 실패했습니다.");
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      }
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      setToastMessage("네트워크 오류가 발생했습니다. 다시 시도해주세요.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleRemoveImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = () => {
-    setShowSuccess(true);
-    setTimeout(() => {
-      navigate(-1);
-    }, 2000);
+  // 필수 항목 검증 함수
+  const isFormValid = (): boolean => {
+    return (
+      productLink !== "" &&
+      isValidProductLink(productLink) &&
+      rating !== 0 &&
+      review.trim() !== ""
+    );
   };
 
   const isValidProductLink = (link: string): boolean => {
@@ -57,7 +105,6 @@ export default function ReviewWrite() {
     }
   };
 
-  // review 내용이 바뀔 때마다 실행
   useEffect(() => {
     handleResizeHeight();
   }, [review]);
@@ -83,8 +130,11 @@ export default function ReviewWrite() {
       <div className="flex flex-col px-4 py-4 space-y-6">
         {/* 상품 링크 */}
         <div className="flex flex-col">
-          <label className="flex text-sm font-medium mb-3 gap-1">
-            상품 링크 <span className="text-[#800025]">*</span>
+          <label className="flex text-zinc-900 text-base font-medium font-['Pretendard'] mb-3 gap-1">
+            상품 링크
+            <span className="text-rose-900 text-base font-medium font-['Pretendard']">
+              *
+            </span>
           </label>
           <div className="relative">
             <input
@@ -114,49 +164,26 @@ export default function ReviewWrite() {
 
         {/* 별점 */}
         <div className="flex flex-col">
-          <label className="flex text-sm font-medium mb-3 gap-1">
-            별점 <span className="text-[#800025]">*</span>
+          <label className="flex text-zinc-900 text-base font-medium font-['Pretendard'] mb-3 gap-1">
+            별점
+            <span className="text-rose-900 text-base font-medium font-['Pretendard']">
+              *
+            </span>
           </label>
-          <div className="flex gap-2 justify-center">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <div
-                key={star}
-                className="relative w-10 h-10 cursor-pointer"
-                onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const x = e.clientX - rect.left;
-                  setRating(x < rect.width / 2 ? star - 0.5 : star);
-                }}
-              >
-                {/* 기본 빈 별 배경 */}
-                <img src={starOffIcon} alt="빈 별" className="w-full h-full" />
-                {/* 꽉 찬 별 */}
-                {rating >= star && (
-                  <img
-                    src={starOnIcon}
-                    alt="채워진 별"
-                    className="absolute w-full h-full  top-0 left-0"
-                  />
-                )}
-                {/* 반 별 - 별의 점수가 0.5일 때만 노출 */}
-                {rating === star - 0.5 && (
-                  <div className="absolute top-0 left-0 h-full w-1/2 overflow-hidden">
-                    <img
-                      src={starOnIcon}
-                      alt="반 별"
-                      className="w-10 h-10 max-w-none"
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <StarRating
+            rating={rating}
+            onRatingChange={setRating}
+            isInteractive={true}
+          />
         </div>
 
         {/* 후기 */}
         <div className="flex flex-col">
-          <label className="flex text-sm font-medium mb-3 gap-1">
-            후기 <span className="text-[#800025]">*</span>
+          <label className="flex text-zinc-900 text-base font-medium font-['Pretendard'] mb-3 gap-1">
+            후기
+            <span className="text-rose-900 text-base font-medium font-['Pretendard']">
+              *
+            </span>
           </label>
           <textarea
             ref={textareaRef}
@@ -169,69 +196,48 @@ export default function ReviewWrite() {
           <div className="font-pretendard font-normal text-right text-[13px] text-[#B5B5B5]">
             {review.length} / 500
           </div>
+
+          <HashtagInput
+            hashtags={hashtags}
+            onHashtagsChange={setHashtags}
+            onToast={(message) => {
+              setToastMessage(message);
+              setShowToast(true);
+              setTimeout(() => setShowToast(false), 3000);
+            }}
+          />
         </div>
 
         {/* 사진 */}
-        <div className="flex flex-col">
-          <label className="flex text-sm font-medium mb-3 gap-1">사진</label>
-          <div className="flex gap-1">
-            {images.length < 4 && (
-              <label className="relative w-15 h-15 aspect-square border-2 border-[#DADADA] rounded-lg flex items-center justify-center cursor-pointer hover:bg-gray-50">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <img src={cameraIcon} className="w-8 h-8" />
-              </label>
-            )}
-            {images.map((image, index) => (
-              <div
-                key={index}
-                className="relative w-15 h-15 aspect-square rounded flex items-center justify-center overflow-hidden"
-              >
-                <img
-                  src={URL.createObjectURL(image)}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                />
-                <button
-                  onClick={() => handleRemoveImage(index)}
-                  className="absolute top-[2px] right-[2px] flex items-center justify-center z-10"
-                >
-                  <img src={closeImgIcon} alt="Remove" className="w-5 h-5" />
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="font-pretendard font-normal text-right text-[13px] text-[#B5B5B5] mt-2">
-            {images.length} / 4
-          </div>
-        </div>
+        <ImageUpload images={images} onImagesChange={setImages} />
       </div>
 
       {/* 게시하기 버튼 */}
-      <div className="fixed bottom-0 w-[390px] bg-white p-4 flex justify-center">
-        <button
-          onClick={handleSubmit}
-          className="w-full max-w-sm py-3 bg-[#800025] text-white rounded-lg font-medium"
-        >
-          게시하기
-        </button>
-      </div>
+      <SubmitButton
+        isValid={isFormValid()}
+        isLoading={isLoading}
+        onSubmit={handleSubmit}
+      />
 
       {/* 성공 모달 */}
       {showSuccess && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="w-full h-[153px] bg-white rounded-2xl flex flex-col items-center gap-6 max-w-sm mx-4 pt-9">
+        <div className="fixed inset-0 w-[390px] mx-auto bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="w-full h-[153px] bg-white rounded-2xl flex flex-col items-center gap-6 pt-9">
             <div className="w-10 h-10 bg-[#800025] rounded-full flex items-center justify-center">
               <img src={checkIcon} alt="Check" className="w-4 h-[11px]" />
             </div>
             <p className="text-center text-[#191919] font-medium text-base">
               리뷰를 성공적으로 게시했어요.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* 토스트 메시지 */}
+      {showToast && (
+        <div className="fixed bottom-4 w-[390px] mx-auto left-1/2 transform -translate-x-1/2 px-4 z-40">
+          <div className="text-white text-base font-medium font-['Pretendard'] bg-zinc-700 px-4 py-4 rounded">
+            {toastMessage}
           </div>
         </div>
       )}
