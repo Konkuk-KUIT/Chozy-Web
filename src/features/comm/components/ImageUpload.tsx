@@ -1,6 +1,6 @@
 // 커뮤니티 사진 업로드 컴포넌트
 
-import cameraIcon from "../../../assets/community/camera.svg";
+import cameraIcon from "../../../assets/community/review-camera.svg";
 import closeImgIcon from "../../../assets/community/close-img.svg";
 
 interface ImageUploadProps {
