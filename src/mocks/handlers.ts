@@ -934,3 +934,42 @@ handlers.push(
     return HttpResponse.json(ok(data), { status: 200 });
   })
 );
+
+// 팔로우 요청/취소
+// src/mocks/handlers.ts
+
+type FollowStatus = "FOLLOWING" | "NONE";
+
+const followMap = new Map<string, FollowStatus>();
+// key: targetUserId, value: status
+
+handlers.push(
+  http.post("/users/me/followings/:targetUserId", ({ params }) => {
+    const targetUserId = String(params.targetUserId);
+    followMap.set(targetUserId, "FOLLOWING");
+
+    return HttpResponse.json(
+      {
+        targetUserId,
+        followStatus: "FOLLOWING",
+        requestedAt: new Date().toISOString(),
+      },
+      { status: 200 }
+    );
+  }),
+
+  http.delete("/users/me/followings/:targetUserId", ({ params }) => {
+    const targetUserId = String(params.targetUserId);
+    followMap.set(targetUserId, "NONE");
+
+    return HttpResponse.json(
+      {
+        targetUserId,
+        followStatus: "NONE",
+        unfollowedAt: new Date().toISOString(),
+        processedAt: new Date().toISOString(),
+      },
+      { status: 200 }
+    );
+  })
+);
