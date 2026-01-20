@@ -987,7 +987,7 @@ handlers.push(
         img: Array<{ fileName: string; contentType: string }>;
       };
 
-      const { productUrl, rating, content, img } = requestBody;
+      const { productUrl, rating, content } = requestBody;
 
       // 필수 필드 검증
       if (!productUrl || rating === undefined || !content) {
