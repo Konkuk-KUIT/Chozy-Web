@@ -386,7 +386,7 @@ export const handlers = [
 
     return HttpResponse.json(
       { message: "로그인 성공!", user: info },
-      { status: 201 }
+      { status: 201 },
     );
   }),
 
@@ -435,7 +435,7 @@ export const handlers = [
       items.sort((a, b) => finalPrice(b) - finalPrice(a));
     } else if (sort === "RATING") {
       items.sort(
-        (a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount
+        (a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount,
       );
     } else {
       if (searchParam) {
@@ -450,7 +450,7 @@ export const handlers = [
           (a, b) =>
             b.rating - a.rating ||
             b.reviewCount - a.reviewCount ||
-            a.productId - b.productId
+            a.productId - b.productId,
         );
       }
     }
@@ -690,8 +690,32 @@ handlers.push(
       items = items.filter((f) => f.type === "REVIEW");
     }
 
+    items = items.map((f) => {
+      const seeded = {
+        reaction: f.myState.reaction,
+        likes: f.counts.likes,
+        dislikes: f.counts.dislikes,
+      };
+      const s = getReactionState(f.feedId, seeded);
+      const bookmarked = getBookmark(f.feedId, f.myState.isbookmarked);
+
+      return {
+        ...f,
+        counts: {
+          ...f.counts,
+          likes: s.likes,
+          dislikes: s.dislikes,
+        },
+        myState: {
+          ...f.myState,
+          reaction: s.reaction,
+          isbookmarked: bookmarked,
+        },
+      };
+    });
+
     return HttpResponse.json(ok(items));
-  })
+  }),
 );
 
 // 커뮤니티 게시글 상세보기
@@ -927,12 +951,62 @@ handlers.push(
           timestamp: new Date().toISOString(),
           result: null,
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    return HttpResponse.json(ok(data), { status: 200 });
-  })
+    const seeded = {
+      reaction: data.feed.myState.reaction,
+      likes: data.feed.counts.likes,
+      dislikes: data.feed.counts.dislikes,
+    };
+    const state = getReactionState(id, seeded);
+    const bookmarked = getBookmark(id, data.feed.myState.isbookmarked);
+
+    const patched: FeedDetailResult = {
+      ...data,
+      feed: {
+        ...data.feed,
+        counts: {
+          ...data.feed.counts,
+          likes: state.likes,
+          dislikes: state.dislikes,
+        },
+        myState: {
+          ...data.feed.myState,
+          reaction: state.reaction,
+          isbookmarked: bookmarked,
+        },
+      },
+    };
+
+    const patchCommentsWithState = (list: CommentItem[]): CommentItem[] => {
+      return (list ?? []).map((c) => {
+        const seeded = {
+          reaction: c.myState.reaction,
+          likes: c.counts.likes,
+          dislikes: c.counts.dislikes,
+        };
+        const s = getCommentState(c.commentId, seeded);
+
+        return {
+          ...c,
+          counts: {
+            ...c.counts,
+            likes: s.likes,
+            dislikes: s.dislikes,
+          },
+          myState: {
+            ...c.myState,
+            reaction: s.reaction,
+          },
+          comment: c.comment ? patchCommentsWithState(c.comment) : c.comment,
+        };
+      });
+    };
+
+    return HttpResponse.json(ok(patched), { status: 200 });
+  }),
 );
 
 // 팔로우 요청/취소
@@ -954,7 +1028,7 @@ handlers.push(
         followStatus: "FOLLOWING",
         requestedAt: new Date().toISOString(),
       },
-      { status: 200 }
+      { status: 200 },
     );
   }),
 
@@ -969,9 +1043,285 @@ handlers.push(
         unfollowedAt: new Date().toISOString(),
         processedAt: new Date().toISOString(),
       },
-      { status: 200 }
+      { status: 200 },
     );
-  })
+  }),
+);
+
+// 게시글 좋아요/싫어요 토글 요청
+type ReactionState = {
+  reaction: Reaction;
+  likes: number;
+  dislikes: number;
+};
+
+// feedId -> 상태 저장
+const reactionStateByFeedId = new Map<number, ReactionState>();
+
+const getReactionState = (
+  feedId: number,
+  seedFrom?: { reaction: Reaction; likes: number; dislikes: number },
+) => {
+  if (!reactionStateByFeedId.has(feedId)) {
+    // 최초 접근 시: 기존 더미(FEED_DETAIL_MAP) 값으로 시드(초기화)해주면 자연스러움
+    if (seedFrom) {
+      reactionStateByFeedId.set(feedId, { ...seedFrom });
+    } else {
+      reactionStateByFeedId.set(feedId, {
+        reaction: "NONE",
+        likes: 0,
+        dislikes: 0,
+      });
+    }
+  }
+  return reactionStateByFeedId.get(feedId)!;
+};
+
+const applyToggle = (
+  feedId: number,
+  like: boolean,
+  seedFrom?: { reaction: Reaction; likes: number; dislikes: number },
+) => {
+  const s = getReactionState(feedId, seedFrom);
+
+  if (like) {
+    // like:true
+    if (s.reaction === "LIKE") {
+      s.reaction = "NONE";
+      s.likes = Math.max(0, s.likes - 1);
+    } else if (s.reaction === "DISLIKE") {
+      s.reaction = "LIKE";
+      s.dislikes = Math.max(0, s.dislikes - 1);
+      s.likes += 1;
+    } else {
+      s.reaction = "LIKE";
+      s.likes += 1;
+    }
+  } else {
+    // like:false (싫어요)
+    if (s.reaction === "DISLIKE") {
+      s.reaction = "NONE";
+      s.dislikes = Math.max(0, s.dislikes - 1);
+    } else if (s.reaction === "LIKE") {
+      s.reaction = "DISLIKE";
+      s.likes = Math.max(0, s.likes - 1);
+      s.dislikes += 1;
+    } else {
+      s.reaction = "DISLIKE";
+      s.dislikes += 1;
+    }
+  }
+
+  reactionStateByFeedId.set(feedId, s);
+  return s;
+};
+
+handlers.push(
+  http.post("/community/feeds/:feedId/like", async ({ params, request }) => {
+    const feedId = Number(params.feedId);
+    const data = FEED_DETAIL_MAP[feedId];
+
+    if (!data) {
+      return HttpResponse.json(
+        {
+          isSuccess: true,
+          code: 4040,
+          message: "존재하지 않는 피드입니다.",
+          timestamp: new Date().toISOString(),
+          result: null,
+        },
+        { status: 404 },
+      );
+    }
+
+    const body = (await request.json()) as { like?: boolean };
+
+    if (typeof body.like !== "boolean") {
+      return HttpResponse.json(
+        {
+          isSuccess: true,
+          code: 4000,
+          message: "요청에 실패했습니다. (like 값이 필요합니다)",
+          timestamp: new Date().toISOString(),
+          result: null,
+        },
+        { status: 400 },
+      );
+    }
+
+    // seed는 상세 더미값에서 가져오고, 실제 상태는 reactionStateByFeedId에서 관리
+    const seeded = {
+      reaction: data.feed.myState.reaction,
+      likes: data.feed.counts.likes,
+      dislikes: data.feed.counts.dislikes,
+    };
+
+    const next = applyToggle(feedId, body.like, seeded);
+
+    // (선택) FEED_DETAIL_MAP 자체도 같이 업데이트해두면, 다른 곳에서 맵을 직접 읽을 때도 일관됨
+    data.feed.myState.reaction = next.reaction;
+    data.feed.counts.likes = next.likes;
+    data.feed.counts.dislikes = next.dislikes;
+
+    return HttpResponse.json(
+      ok({
+        feedId,
+        reaction: next.reaction,
+        counts: { likes: next.likes, dislikes: next.dislikes },
+      }),
+      { status: 200 },
+    );
+  }),
+);
+
+// 게시글 댓글 좋아요/싫어요 토글 요청
+type CommentReactionState = {
+  reaction: Reaction;
+  likes: number;
+  dislikes: number;
+};
+
+// commentId -> 상태 저장
+const commentReactionStateById = new Map<number, CommentReactionState>();
+
+const getCommentState = (
+  commentId: number,
+  seedFrom?: { reaction: Reaction; likes: number; dislikes: number },
+) => {
+  if (!commentReactionStateById.has(commentId)) {
+    if (seedFrom) commentReactionStateById.set(commentId, { ...seedFrom });
+    else
+      commentReactionStateById.set(commentId, {
+        reaction: "NONE",
+        likes: 0,
+        dislikes: 0,
+      });
+  }
+  return commentReactionStateById.get(commentId)!;
+};
+
+const applyCommentToggle = (
+  commentId: number,
+  like: boolean,
+  seedFrom?: { reaction: Reaction; likes: number; dislikes: number },
+) => {
+  const s = getCommentState(commentId, seedFrom);
+
+  if (like) {
+    // like:true
+    if (s.reaction === "LIKE") {
+      s.reaction = "NONE";
+      s.likes = Math.max(0, s.likes - 1);
+    } else if (s.reaction === "DISLIKE") {
+      s.reaction = "LIKE";
+      s.dislikes = Math.max(0, s.dislikes - 1);
+      s.likes += 1;
+    } else {
+      s.reaction = "LIKE";
+      s.likes += 1;
+    }
+  } else {
+    // like:false (싫어요)
+    if (s.reaction === "DISLIKE") {
+      s.reaction = "NONE";
+      s.dislikes = Math.max(0, s.dislikes - 1);
+    } else if (s.reaction === "LIKE") {
+      s.reaction = "DISLIKE";
+      s.likes = Math.max(0, s.likes - 1);
+      s.dislikes += 1;
+    } else {
+      s.reaction = "DISLIKE";
+      s.dislikes += 1;
+    }
+  }
+
+  commentReactionStateById.set(commentId, s);
+  return s;
+};
+
+handlers.push(
+  http.post(
+    "/community/comments/:commentId/like",
+    async ({ params, request }) => {
+      const commentId = Number(params.commentId);
+      const body = (await request.json()) as { like?: boolean };
+
+      if (typeof body.like !== "boolean") {
+        return HttpResponse.json(
+          {
+            isSuccess: true,
+            code: 4000,
+            message: "요청에 실패했습니다. (like 값이 필요합니다)",
+            timestamp: new Date().toISOString(),
+            result: null,
+          },
+          { status: 400 },
+        );
+      }
+
+      // seed: 현재 FEED_DETAIL_MAP에 있는 댓글값에서 가져오고 싶다면 찾아서 넣어줄 수도 있는데,
+      // 여기선 상태가 없으면 기본값으로 시작하게 두고,
+      // GET detail에서 seed를 제대로 주입하므로 충분히 자연스럽게 동작함.
+      const next = applyCommentToggle(commentId, body.like);
+
+      return HttpResponse.json(
+        ok({
+          commentId,
+          reaction: next.reaction,
+          counts: { likes: next.likes, dislikes: next.dislikes },
+        }),
+        { status: 200 },
+      );
+    },
+  ),
+);
+
+// 북마크 토글 요청
+const bookmarkByFeedId = new Map<number, boolean>();
+
+const getBookmark = (feedId: number, seed?: boolean) => {
+  if (!bookmarkByFeedId.has(feedId)) {
+    bookmarkByFeedId.set(feedId, seed ?? false);
+  }
+  return bookmarkByFeedId.get(feedId)!;
+};
+
+const setBookmark = (feedId: number, value: boolean) => {
+  bookmarkByFeedId.set(feedId, value);
+  return value;
+};
+
+handlers.push(
+  http.post(
+    "/community/feeds/:feedId/bookmark",
+    async ({ params, request }) => {
+      const feedId = Number(params.feedId);
+
+      const body = (await request.json()) as { bookmark?: boolean };
+      if (typeof body.bookmark !== "boolean") {
+        return HttpResponse.json(
+          {
+            isSuccess: true,
+            code: 4000,
+            message: "요청에 실패했습니다. (bookmark 값이 필요합니다)",
+            timestamp: new Date().toISOString(),
+            result: null,
+          },
+          { status: 400 },
+        );
+      }
+
+      const next = setBookmark(feedId, body.bookmark);
+
+      return HttpResponse.json(
+        ok({
+          feedId,
+          isBookmarked: next,
+        }),
+        { status: 200 },
+      );
+    },
+  ),
 );
 
 // 리뷰 작성
@@ -998,7 +1348,7 @@ handlers.push(
             message: "요청에 실패했습니다.",
             timestamp: new Date().toISOString(),
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -1008,7 +1358,7 @@ handlers.push(
         ok({
           reviewId,
           message: "리뷰를 성공적으로 게시했어요.",
-        })
+        }),
       );
     } catch (error) {
       return HttpResponse.json(
@@ -1018,8 +1368,8 @@ handlers.push(
           message: "요청에 실패했습니다.",
           timestamp: new Date().toISOString(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
-  })
+  }),
 );
