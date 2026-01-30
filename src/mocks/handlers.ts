@@ -386,7 +386,7 @@ export const handlers = [
 
     return HttpResponse.json(
       { message: "로그인 성공!", user: info },
-      { status: 201 }
+      { status: 201 },
     );
   }),
 
@@ -435,7 +435,7 @@ export const handlers = [
       items.sort((a, b) => finalPrice(b) - finalPrice(a));
     } else if (sort === "RATING") {
       items.sort(
-        (a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount
+        (a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount,
       );
     } else {
       if (searchParam) {
@@ -450,7 +450,7 @@ export const handlers = [
           (a, b) =>
             b.rating - a.rating ||
             b.reviewCount - a.reviewCount ||
-            a.productId - b.productId
+            a.productId - b.productId,
         );
       }
     }
@@ -691,7 +691,7 @@ handlers.push(
     }
 
     return HttpResponse.json(ok(items));
-  })
+  }),
 );
 
 // 커뮤니티 게시글 상세보기
@@ -927,12 +927,12 @@ handlers.push(
           timestamp: new Date().toISOString(),
           result: null,
         },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     return HttpResponse.json(ok(data), { status: 200 });
-  })
+  }),
 );
 
 // 팔로우 요청/취소
@@ -954,7 +954,7 @@ handlers.push(
         followStatus: "FOLLOWING",
         requestedAt: new Date().toISOString(),
       },
-      { status: 200 }
+      { status: 200 },
     );
   }),
 
@@ -969,9 +969,61 @@ handlers.push(
         unfollowedAt: new Date().toISOString(),
         processedAt: new Date().toISOString(),
       },
-      { status: 200 }
+      { status: 200 },
     );
-  })
+  }),
+);
+
+// 포스트 작성
+// path: /community/posts/create
+// method: POST
+handlers.push(
+  http.post("/community/posts/create", async ({ request }) => {
+    try {
+      const requestBody = (await request.json()) as {
+        content: string;
+        hashtags: string[];
+        img: Array<{ fileName: string; contentType: string }>;
+      };
+
+      const { content } = requestBody;
+
+      // 필수 필드 검증
+      if (!content) {
+        return HttpResponse.json(
+          {
+            isSuccess: false,
+            code: 4000,
+            message: "요청에 실패했습니다.",
+            timestamp: new Date().toISOString(),
+          },
+          { status: 400 },
+        );
+      }
+
+      // 성공 응답
+      return HttpResponse.json(
+        {
+          isSuccess: true,
+          code: 1000,
+          message: "요청에 성공하였습니다.",
+          timestamp: new Date().toISOString(),
+          result: "게시글을 성공적으로 게시했어요.",
+        },
+        { status: 200 },
+      );
+    } catch (error) {
+      return HttpResponse.json(
+        {
+          isSuccess: true,
+          code: 4000,
+          message: "요청에 실패했습니다.",
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 },
+      );
+    }
+  }),
 );
 
 // 리뷰 작성
@@ -998,7 +1050,7 @@ handlers.push(
             message: "요청에 실패했습니다.",
             timestamp: new Date().toISOString(),
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -1008,7 +1060,7 @@ handlers.push(
         ok({
           reviewId,
           message: "리뷰를 성공적으로 게시했어요.",
-        })
+        }),
       );
     } catch (error) {
       return HttpResponse.json(
@@ -1018,8 +1070,8 @@ handlers.push(
           message: "요청에 실패했습니다.",
           timestamp: new Date().toISOString(),
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
-  })
+  }),
 );
