@@ -1,8 +1,11 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import DetailHeader from "../../../components/DetailHeader";
 import toastmsg from "../../../assets/community/toastmsg.svg";
 
 export default function Setting() {
+  const navigate = useNavigate();
+
   const [isAlarmOn, setIsAlarmOn] = useState(true);
 
   const [showToast, setShowToast] = useState(false);
@@ -38,6 +41,7 @@ export default function Setting() {
           </button>
           <button
             type="button"
+            onClick={() => navigate("/mypage/likepost")}
             className="w-full text-left py-4 text-[#191919] text-[16px]"
           >
             좋아요한 게시글
@@ -75,6 +79,7 @@ export default function Setting() {
           </button>
           <button
             type="button"
+            onClick={() => navigate("/mypage/blocked")}
             className="w-full text-left py-4 text-[#191919] text-[16px]"
           >
             차단한 계정
@@ -126,7 +131,7 @@ export default function Setting() {
   `}
         >
           <div className="mx-auto w-[358px]">
-            <div className="flex items-center gap-2 bg-[#787878] rounded-[8px] p-4">
+            <div className="flex items-center gap-2 bg-[#787878] rounded-[4px] p-4">
               {isAlarmOn ? (
                 <img src={toastmsg} alt="토스트 아이콘" className="w-5 h-5" />
               ) : (
