@@ -1,7 +1,11 @@
-import back from "../../../assets/all/back.svg";
+import back from "../assets/all/back.svg";
 import { useNavigate } from "react-router-dom";
 
-export default function PostHeader() {
+type DetailHeaderProps = {
+  title: string;
+};
+
+export default function PostHeader({ title }: DetailHeaderProps) {
   const navigate = useNavigate();
 
   return (
@@ -11,7 +15,7 @@ export default function PostHeader() {
           <img src={back} alt="뒤로가기" />
         </button>
         <span className="absolute left-1/2 -translate-x-1/2 text-[#191919] text-[18px] font-semibold">
-          게시글
+          {title}
         </span>
       </div>
     </header>

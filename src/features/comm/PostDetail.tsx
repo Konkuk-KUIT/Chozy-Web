@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import PostHeader from "./components/PostHeader";
+import DetailHeader from "../../components/DetailHeader";
 import StarRating from "./components/StarRating";
 import CommentRow from "./components/CommentRow";
 import CommentInput from "./components/CommentInput";
@@ -171,7 +171,7 @@ export default function PostDetail() {
   if (loading) {
     return (
       <>
-        <PostHeader />
+        <DetailHeader title="게시글" />
         <div className="pt-[48px] px-4 py-6 bg-white min-h-screen">
           로딩중...
         </div>
@@ -182,7 +182,7 @@ export default function PostDetail() {
   if (!feed) {
     return (
       <>
-        <PostHeader />
+        <DetailHeader title="게시글" />
         <div className="pt-[48px] px-4 py-6 bg-white min-h-screen">
           데이터가 없어요.
         </div>
@@ -387,7 +387,7 @@ export default function PostDetail() {
 
   return (
     <div className="h-screen flex flex-col">
-      <PostHeader />
+      <DetailHeader title="게시글" />
       <div className="flex-1 min-h-0 scroll-available overflow-y-auto scrollbar-hide pb-15">
         <div className="bg-white">
           {/* 프로필 */}
