@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Nav from "../../components/Nav";
 import Header from "./components/Header";
+import TabBar from "./components/TabBar";
 import bgLogo from "../../assets/mypage/bgLogo.svg";
 import defaultProfile from "../../assets/mypage/defaultProfile.svg";
 
@@ -31,8 +32,12 @@ type MyProfile = {
   bookmarkCount: number;
 };
 
+type Tab = "reviews" | "bookmarks";
+
 function MyMain() {
   const [profile, setProfile] = useState<MyProfile | null>(null);
+  const [tab, setTab] = useState<Tab>("reviews");
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -44,6 +49,22 @@ function MyMain() {
     run();
   }, []);
 
+  const scrollTop = () => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollTop();
+  }, [tab]);
+
+  const handleTabChange = (next: Tab) => {
+    if (next === tab) {
+      scrollTop();
+      return;
+    }
+    setTab(next);
+  };
+
   const bgUrl = profile?.backgroundImageUrl ?? null; // 배경사진 있으면 그걸 쓰고 없으면 기본
   const profileImg = profile?.profileImageUrl ?? null;
   const statusMessage = profile?.statusMessage ?? "";
@@ -52,7 +73,7 @@ function MyMain() {
 
   return (
     <>
-      <div className="absolute top-0 left-0 right-0 h-[256px] bg-[#800025] z-0">
+      <div className="absolute top-0 left-0 right-0 h-[256px] bg-[#800025] z-10">
         {bgUrl ? (
           <img src={bgUrl} alt="배경" className="w-full h-full object-cover" />
         ) : (
@@ -61,12 +82,12 @@ function MyMain() {
           </div>
         )}
       </div>
-      <div className="relative z-10">
+      <div className="relative z-20">
         <Header />
       </div>
 
       {!!statusMessage && (
-        <div className="absolute left-[18px] top-[187px] z-20">
+        <div className="absolute left-[18px] top-[187px] z-30">
           <div className="flex items-center gap-2 px-2 py-[6px] bg-white/10 backdrop-blur text-white">
             <span className="text-[14px] text-white whitespace-pre-line">
               💬 {statusMessage}
@@ -75,7 +96,7 @@ function MyMain() {
         </div>
       )}
 
-      <div className="absolute left-4 top-[228px] z-20">
+      <div className="absolute left-4 top-[228px] z-30">
         <div className="w-19 h-19 rounded-full overflow-hidden">
           {profileImg ? (
             <img
@@ -91,7 +112,7 @@ function MyMain() {
         </div>
       </div>
 
-      <div className="relative pt-[235px]">
+      <div className="relative pt-[235px] bg-white">
         <div className="px-4 pt-8 pb-5">
           {/* 닉네임/아이디 */}
           <div className="pl-[100px]">
@@ -134,8 +155,8 @@ function MyMain() {
             </div>
           </div>
         </div>
+        <TabBar value={tab} onChange={handleTabChange} />
       </div>
-
       <Nav scrollTargetSelector=".scroll-available" />
     </>
   );

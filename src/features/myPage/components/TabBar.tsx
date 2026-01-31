@@ -1,5 +1,5 @@
 // 커뮤니티 홈화면 탭바
-type TabKey = "RECOMMEND" | "FOLLOWING";
+type TabKey = "reviews" | "bookmarks";
 
 interface TabBarProps {
   value: TabKey;
@@ -8,31 +8,31 @@ interface TabBarProps {
 
 export default function TabBar({ value, onChange }: TabBarProps) {
   return (
-    <div className="pt-12 w-full bg-white">
+    <div className="pt-4 w-full bg-white">
       <div className="grid grid-cols-2">
         <button
           type="button"
-          onClick={() => onChange("RECOMMEND")}
+          onClick={() => onChange("reviews")}
           className={`h-[42px] text-[16px] border-b-1 p-[10px]
             ${
-              value === "RECOMMEND"
+              value === "reviews"
                 ? "text-[#800025] font-semibold border-[#800025]"
                 : "text-[#B5B5B5] border-transparent"
             }`}
         >
-          추천
+          내 후기
         </button>
         <button
           type="button"
-          onClick={() => onChange("FOLLOWING")}
+          onClick={() => onChange("bookmarks")}
           className={`h-[42px] text-[16px] border-b-1 p-[10px]
             ${
-              value === "FOLLOWING"
-                ? "text-[#66021F] font-semibold border-[#800025]"
+              value === "bookmarks"
+                ? "text-[#800025] font-semibold border-[#800025]"
                 : "text-[#B5B5B5] border-transparent"
             }`}
         >
-          팔로우 중
+          북마크
         </button>
       </div>
     </div>

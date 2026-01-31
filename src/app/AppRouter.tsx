@@ -6,6 +6,7 @@ import ReviewWrite from "../features/comm/ReviewWrite";
 import CommMain from "../features/comm/CommMain";
 import PostDetail from "../features/comm/PostDetail";
 import MyMain from "../features/myPage/MyMain";
+import Setting from "../features/myPage/components/Setting";
 
 export default function AppRouter() {
   return (
@@ -26,6 +27,7 @@ export default function AppRouter() {
       {/* 개인 페이지 라우팅 */}
       <Route path="/heart" element={<Home />} />
       <Route path="/mypage" element={<MyMain />} />
+      <Route path="/mypage/setting" element={<Setting />} />
     </Routes>
   );
 }
