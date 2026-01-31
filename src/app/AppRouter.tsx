@@ -6,6 +6,7 @@ import ReviewWrite from "../features/comm/ReviewWrite";
 import CommMain from "../features/comm/CommMain";
 import PostDetail from "../features/comm/PostDetail";
 import MyMain from "../features/myPage/MyMain";
+import ProfileEdit from "../features/myPage/ProfileEdit";
 import PostWrite from "../features/comm/PostWrite";
 
 export default function AppRouter() {
@@ -28,6 +29,7 @@ export default function AppRouter() {
       {/* 개인 페이지 라우팅 */}
       <Route path="/heart" element={<Home />} />
       <Route path="/mypage" element={<MyMain />} />
+      <Route path="/mypage/edit" element={<ProfileEdit />} />
     </Routes>
   );
 }

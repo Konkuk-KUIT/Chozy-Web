@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Nav from "../../components/Nav";
 import Header from "./components/Header";
 import bgLogo from "../../assets/mypage/bgLogo.svg";
@@ -32,6 +33,7 @@ type MyProfile = {
 };
 
 function MyMain() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<MyProfile | null>(null);
 
   useEffect(() => {
@@ -107,6 +109,7 @@ function MyMain() {
           <div className="mt-4 flex items-center gap-5">
             <button
               type="button"
+              onClick={() => navigate("/mypage/edit")}
               className="h-8 ml-4 px-2 py-1 rounded-[4px] bg-[#F9F9F9] text-[#575757] text-[14px] font-medium"
             >
               프로필 수정
