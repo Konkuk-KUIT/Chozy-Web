@@ -397,7 +397,6 @@ export let handlers = [
 
     return HttpResponse.json(ok(result));
   }),
-
 ];
 
 // 커뮤니티 게시글 목록 조회
@@ -1227,6 +1226,84 @@ handlers.push(
       );
     },
   ),
+);
+
+// 포스트 작성
+// path: /community/posts/create
+// method: POST
+handlers.push(
+  http.post("/community/posts/create", async ({ request }) => {
+    try {
+      const requestBody = (await request.json()) as {
+        content: string;
+        hashTags: string;
+        img: Array<{ imageUrl: string; contentType: string }>;
+      };
+
+      const { content, hashTags } = requestBody;
+
+      // 필수 필드 검증
+      if (!content) {
+        return HttpResponse.json(
+          {
+            isSuccess: false,
+            code: 4000,
+            message: "요청에 실패했습니다.",
+            timestamp: new Date().toISOString(),
+          },
+          { status: 400 },
+        );
+      }
+
+      // 성공 응답 (postId 포함)
+      const postId = Math.floor(Math.random() * 100000);
+
+      // FEED_DETAIL_MAP에 새로운 포스트 데이터 추가
+      FEED_DETAIL_MAP[postId] = {
+        feed: {
+          feedId: postId,
+          type: "POST",
+          user: {
+            profileImg: "https://cdn.example.com/users/12/profile.jpg",
+            userName: "이수아",
+            userId: "KUIT_PM",
+          },
+          content: {
+            text: content,
+            contentImgs: [],
+            hashTags: hashTags ? hashTags.split(" ").filter((tag) => tag) : [],
+          },
+          counts: { comments: 0, likes: 0, dislikes: 0, quotes: 0 },
+          myState: { reaction: "NONE", isbookmarked: false, isreposted: false },
+        },
+        comments: [],
+      };
+
+      return HttpResponse.json(
+        {
+          isSuccess: true,
+          code: 1000,
+          message: "요청에 성공하였습니다.",
+          timestamp: new Date().toISOString(),
+          result: {
+            postId,
+            message: "게시글을 성공적으로 게시했어요.",
+          },
+        },
+        { status: 200 },
+      );
+    } catch (error) {
+      return HttpResponse.json(
+        {
+          isSuccess: true,
+          code: 4000,
+          message: "요청에 실패했습니다.",
+          timestamp: new Date().toISOString(),
+        },
+        { status: 400 },
+      );
+    }
+  }),
 );
 
 // 리뷰 작성
