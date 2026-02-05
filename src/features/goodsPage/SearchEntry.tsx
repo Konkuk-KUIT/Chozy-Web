@@ -231,7 +231,7 @@ export default function SearchEntry() {
   };
 
   return (
-    <div className="relative w-[390px] mx-auto bg-white min-h-screen">
+    <div className="relative h-full flex flex-col bg-white w-full overflow-x-hidden">
       <SearchBar2
         autoFocus
         backBehavior="BACK"
@@ -240,7 +240,7 @@ export default function SearchEntry() {
         onSubmitQuery={(q) => runSearch(q)}
       />
 
-      <main className="pt-[72px]">
+      <main className="flex-1 overflow-y-auto scrollbar-hide pt-[72px]">
         <section className="bg-white">
           <div className={`h-1 ${SECTION_GAP_BG}`} />
           <div className="px-4 py-4">
@@ -294,7 +294,7 @@ export default function SearchEntry() {
               </h2>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-x-[24px] gap-y-3">
+            <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3">
               {popularSlots.map((k, idx) => {
                 const rank = idx + 1;
                 const icon = hasPopularKeywords
@@ -311,19 +311,23 @@ export default function SearchEntry() {
                     disabled={!clickable}
                     onClick={() => runSearch(k.keyword)}
                     className={`
-                      w-[165px] flex items-center justify-between bg-transparent px-0 py-0
+                      w-full min-w-0 flex items-center justify-between bg-transparent px-0 py-0
                       ${clickable ? "cursor-pointer" : "cursor-default"}
                     `}
                   >
                     <div className="flex items-center gap-1 min-w-0">
-                      <span className="text-[12px] font-bold text-[#66021F]">
+                      <span className="text-[12px] font-bold text-[#66021F] flex-shrink-0">
                         {rank}
                       </span>
-                      <span className="text-[12px] text-[#191919] truncate">
+                      <span className="text-[12px] text-[#191919] min-w-0 truncate">
                         {hasPopularKeywords ? k.keyword : ""}
                       </span>
                     </div>
-                    <img src={icon} alt="trend" className="w-4 h-4 shrink-0" />
+                    <img
+                      src={icon}
+                      alt="trend"
+                      className="w-4 h-4 flex-shrink-0"
+                    />
                   </button>
                 );
               })}
