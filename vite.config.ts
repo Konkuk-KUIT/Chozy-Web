@@ -8,8 +8,19 @@ export default defineConfig({
   server: {
     proxy: {
       "/auth": {
-        target: "http://localhost:8080",
+        target: "https://chozy.net",
         changeOrigin: true,
+        secure: true,
+      },
+      "/home": {
+        target: "https://chozy.net",
+        changeOrigin: true,
+        secure: true,
+      },
+      "/community": {
+        target: "https://chozy.net",
+        changeOrigin: true,
+        secure: true,
       },
     },
   },
