@@ -26,7 +26,7 @@ export default function WithdrawComplete() {
           onClick={onConfirm}
           className="w-[358px] h-12 text-[16px] text-white font-medium bg-[#800025]"
         >
-          탈퇴하기
+          확인
         </button>
       </div>
     </>
