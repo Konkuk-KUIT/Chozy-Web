@@ -116,6 +116,11 @@ type BookmarkToggleResult = {
   isBookmarked: boolean;
 };
 
+type ReplyTarget = null | {
+  parentCommentId: number; // 답글(= depth>0)의 commentId
+  loginId: string; // 표시용 @아이디
+};
+
 export default function PostDetail() {
   const { feedId } = useParams();
   const [detail, setDetail] = useState<FeedDetailResult | null>(null);
@@ -126,6 +131,9 @@ export default function PostDetail() {
   const [toast, setToast] = useState<ToastState>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const shouldScrollRef = useRef(false);
+
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget>(null);
+  const commentInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!feedId) return;
@@ -194,22 +202,37 @@ export default function PostDetail() {
 
   // 댓글 작성
   const handleAddComment = (text: string) => {
-    const newComment: CommentItem = {
-      commentId: Date.now(), // 임시 id (서버 붙이면 서버 id로 교체)
-      user: {
-        profileImg: feed.user.profileImg, // 사용자 정보에 대한 명세서 나오면 교체
-        userName: feed.user.userName,
-        userId: feed.user.userId,
-      },
-      quote: "",
+    // 작성자(임시) - 너 기존 로직 그대로 사용
+    const me: FeedUser = {
+      profileImg: feed.user.profileImg,
+      userName: feed.user.userName,
+      userId: feed.user.userId,
+    };
+
+    // 새 댓글/답글 아이템 생성
+    const newItem: CommentItem = {
+      commentId: Date.now(),
+      user: me,
+      quote: replyTarget?.loginId ?? "", // "~~님에게 답글" 표시용
       content: text,
       createdAt: new Date().toISOString(),
       counts: { comments: 0, likes: 0, dislikes: 0, quotes: 0 },
       myState: { reaction: "NONE", isbookmarked: false, isreposted: false },
       comment: [],
     };
+
+    // (1) 답글(= 답글에 대한 답글)로 달기
+    if (replyTarget) {
+      setComments((prev) =>
+        addChildReply(prev, replyTarget.parentCommentId, newItem),
+      );
+      setReplyTarget(null);
+      return;
+    }
+
+    // (2) 일반 댓글(최상위)
     shouldScrollRef.current = true;
-    setComments((prev) => [...prev, newComment]);
+    setComments((prev) => [...prev, newItem]);
   };
 
   // 토스트 메시지
@@ -383,6 +406,30 @@ export default function PostDetail() {
     } catch (e) {
       showToast("처리 중 오류가 발생했어요.");
     }
+  };
+
+  // 게시글 대댓글
+  const addChildReply = (
+    list: CommentItem[],
+    parentId: number,
+    child: CommentItem,
+  ): CommentItem[] => {
+    return list.map((c) => {
+      if (c.commentId === parentId) {
+        const nextChildren = [...(c.comment ?? []), child];
+        return {
+          ...c,
+          comment: nextChildren,
+          counts: { ...c.counts, comments: (c.counts.comments ?? 0) + 1 }, // 선택
+        };
+      }
+
+      if (c.comment && c.comment.length > 0) {
+        return { ...c, comment: addChildReply(c.comment, parentId, child) };
+      }
+
+      return c;
+    });
   };
 
   return (
@@ -604,6 +651,12 @@ export default function PostDetail() {
                   onToggleReaction={(commentId, like) =>
                     handleToggleCommentReaction(commentId, like)
                   }
+                  onReplyClick={(loginId, parentCommentId) => {
+                    setReplyTarget({ loginId, parentCommentId });
+                    requestAnimationFrame(() =>
+                      commentInputRef.current?.focus(),
+                    );
+                  }}
                 />
               ))}
               <div ref={bottomRef} />
@@ -626,6 +679,9 @@ export default function PostDetail() {
       <CommentInput
         profileImg={feed.user.profileImg}
         onSubmit={handleAddComment}
+        replyTo={replyTarget?.loginId ?? null}
+        onClearReply={() => setReplyTarget(null)}
+        inputRef={commentInputRef}
       />
     </div>
   );
