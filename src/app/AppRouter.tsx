@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import Login from "../features/login/Login";
+import Terms from "../features/login/Terms";
 import Home from "../features/goodsPage/Home";
 import SearchEntry from "../features/goodsPage/SearchEntry";
 import SearchResult from "../features/goodsPage/SearchResult";
@@ -18,6 +19,7 @@ export default function AppRouter() {
     // 추후 개별 페이지 구현 시 교체 예정
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/login/terms" element={<Terms />} />
       <Route path="/" element={<Home />} />
 
       {/* 상품 검색 페이지 라우팅 */}
