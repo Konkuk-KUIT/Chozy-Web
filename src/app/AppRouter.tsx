@@ -6,6 +6,7 @@ import PrivacyPolicy from "../features/login/PrivacyPolicy";
 import VerificationMethod from "../features/login/VerificationMethod";
 import PhoneVerification from "../features/login/PhoneVerification";
 import EmailVerification from "../features/login/EmailVerification";
+import SignUp from "../features/login/SignUp";
 import Home from "../features/goodsPage/Home";
 import SearchEntry from "../features/goodsPage/SearchEntry";
 import SearchResult from "../features/goodsPage/SearchResult";
@@ -34,6 +35,7 @@ export default function AppRouter() {
       />
       <Route path="/login/verification/phone" element={<PhoneVerification />} />
       <Route path="/login/verification/email" element={<EmailVerification />} />
+      <Route path="/login/signup" element={<SignUp />} />
 
       {/* 홈 페이지 라우팅 */}
       <Route path="/" element={<Home />} />
