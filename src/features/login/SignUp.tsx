@@ -318,7 +318,7 @@ export default function SignUp() {
         <Toast toast={toast} />
         <SubmitButton
           label="다음"
-          onSubmit={() => navigate("/")}
+          onSubmit={() => navigate("/login/nickname")}
           isValid={isFormValid}
           className="relative w-full"
         />
