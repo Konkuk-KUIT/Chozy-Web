@@ -25,7 +25,7 @@ export default function SignUpComplete() {
       <div className="absolute bottom-5 left-4 right-4">
         <SubmitButton
           label="확인"
-          onSubmit={() => navigate("/login")}
+          onSubmit={() => navigate("/onboarding")}
           isValid={true}
           className="relative w-full"
         />
