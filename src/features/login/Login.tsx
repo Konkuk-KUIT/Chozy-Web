@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { login } from "../../api/auth";
 
 import logoIcon from "../../assets/login/logo.svg";
 import cancelIcon from "../../assets/all/cancel.svg";
@@ -33,16 +34,46 @@ export default function Login() {
     }, 3000);
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: 실제 로그인 로직 구현 (서버 연결)
-    // 임시: 아이디와 비밀번호가 일치하지 않으면 토스트 메시지 표시
-    if (userId !== password) {
-      showToast("아이디 또는 비밀번호가 올바르지 않아요.");
-      return;
+    try {
+      // 1. 서버에 로그인 요청
+      const data = await login(userId, password);
+
+      if (data.isSuccess) {
+        // 2. 성공 시 토큰을 localStorage에 저장
+        const { accessToken, refreshToken } = data.result;
+        localStorage.setItem("accessToken", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+
+        // 3. 홈으로 이동
+        navigate("/");
+      }
+    } catch (error: any) {
+      // 4. 명세서 에러 코드에 따른 처리
+      const errorCode = error.response?.data?.code;
+      const errorMessage = error.response?.data?.message;
+
+      console.error(`로그인 실패 [${errorCode}]: ${errorMessage}`);
+
+      switch (errorCode) {
+        case 4010:
+          showToast("아이디 또는 비밀번호가 올바르지 않아요.");
+          break;
+        case 4030:
+          showToast("비활성화된 계정이에요. 관리자에게 문의하세요.");
+          break;
+        case 4001:
+          showToast("입력 정보를 다시 확인해주세요.");
+          break;
+        case 5000:
+          showToast("서버 내부 오류가 발생했습니다.");
+          break;
+        default:
+          showToast("로그인 중 알 수 없는 오류가 발생했습니다.");
+      }
     }
-    console.log("로그인:", { userId, password });
-    navigate("/");
   };
 
   const handleSignUp = () => {

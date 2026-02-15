@@ -13,3 +13,13 @@ export const completeOnboarding = async (nickname: string) => {
   });
   return response.data;
 };
+
+// 내부 로그인 함수
+export const login = async (loginId: string, password: string) => {
+  // 명세서: POST /auth/login
+  const response = await axiosInstance.post("/auth/login", {
+    loginId,
+    password,
+  });
+  return response.data;
+};
