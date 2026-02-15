@@ -8,10 +8,12 @@ import CommentInput from "./components/CommentInput";
 import FeedHeader from "./components/FeedHeader";
 import FeedBody from "./components/FeedBody";
 import FeedActions from "./components/FeedActions";
+import FeedQuoteSheet from "./components/FeedQuoteSheet";
 
 import etc from "../../assets/community/etc.svg";
 import comment from "../../assets/community/comment.svg";
 import quotation from "../../assets/community/quotation.svg";
+import completeRepost from "../../assets/community/completeRepost.svg";
 import goodOn from "../../assets/community/good-on.svg";
 import goodOff from "../../assets/community/good-off.svg";
 import badOn from "../../assets/community/bad-on.svg";
@@ -57,6 +59,7 @@ export default function PostDetail() {
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [toast, setToast] = useState<ToastState>(null);
+  const [quoteSheetOpen, setQuoteSheetOpen] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const shouldScrollRef = useRef(false);
@@ -372,8 +375,74 @@ export default function PostDetail() {
     }
   };
 
+  /** ---------------------------
+   * 리포스트
+   * -------------------------- */
+  const isReposted = detail?.feed.myState.isreposted ?? false;
+
+  const handleToggleRepost = async () => {
+    if (!detail) return;
+
+    const feedId = detail.feed.feedId;
+    const isReposted = detail.feed.myState.isreposted;
+    const contentType = detail.feed.type === "REVIEW" ? "REVIEW" : "POST";
+
+    try {
+      if (!isReposted) {
+        // 리포스트
+        const res = await fetch("/community/repost", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            kind: "REPOST",
+            content_type: contentType,
+            originalFeedId: feedId,
+          }),
+        });
+        if (!res.ok) throw new Error("repost failed");
+
+        showToast("게시글을 리포스트했어요.", toastmsg);
+
+        setDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                feed: {
+                  ...prev.feed,
+                  myState: { ...prev.feed.myState, isreposted: true },
+                },
+              }
+            : prev,
+        );
+        return;
+      }
+
+      // 리포스트 취소
+      const res = await fetch(`/community/repost/${feedId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("repost cancel failed");
+
+      showToast("리포스트를 취소했어요.");
+
+      setDetail((prev) =>
+        prev
+          ? {
+              ...prev,
+              feed: {
+                ...prev.feed,
+                myState: { ...prev.feed.myState, isreposted: false },
+              },
+            }
+          : prev,
+      );
+    } catch {
+      showToast("처리 중 오류가 발생했어요.");
+    }
+  };
+
   return (
-    <div className="h-screen flex flex-col">
+    <div className="relative h-screen flex flex-col">
       <DetailHeader title="게시글" />
 
       <div className="flex-1 min-h-0 scroll-available overflow-y-auto scrollbar-hide pb-15">
@@ -396,6 +465,7 @@ export default function PostDetail() {
             viewCount={viewCount}
             commentIcon={comment}
             quotationIcon={quotation}
+            completeRepostIcon={completeRepost}
             goodOnIcon={goodOn}
             goodOffIcon={goodOff}
             badOnIcon={badOn}
@@ -407,6 +477,7 @@ export default function PostDetail() {
             onToggleDislike={() => handleToggleReaction(false)}
             onToggleBookmark={handleToggleBookmark}
             onClickComment={handleClickPostComment}
+            onClickQuote={() => setQuoteSheetOpen(true)}
           />
         </div>
 
@@ -444,7 +515,7 @@ export default function PostDetail() {
       </div>
 
       {toast && (
-        <div className="fixed bottom-[84px] left-1/2 -translate-x-1/2 z-50 w-[calc(100%-32px)] max-w-[390px]">
+        <div className="absolute inset-x-0 bottom-[84px] z-50 px-4 mx-4">
           <div className="h-12 rounded-[4px] bg-[#787878] px-4 flex items-center gap-[10px]">
             {toast.icon && (
               <img src={toast.icon} alt="" className="w-5 h-5 shrink-0" />
@@ -461,6 +532,18 @@ export default function PostDetail() {
         onClearReply={() => setReplyTarget(null)}
         placeholderText={inputPlaceholder}
         inputRef={commentInputRef}
+      />
+
+      <FeedQuoteSheet
+        open={quoteSheetOpen}
+        onClose={() => setQuoteSheetOpen(false)}
+        isReposted={isReposted}
+        onRepost={handleToggleRepost}
+        onQuote={() => {
+          // TODO: 인용 작성 화면으로 이동
+          // navigate(`/community/feeds/${feed.feedId}/quote`);
+          showToast("인용 작성으로 이동!");
+        }}
       />
     </div>
   );

@@ -1,5 +1,4 @@
 import { http, HttpResponse } from "msw";
-import type { ApiResponse, ApiFeedDetailResult } from "../features/comm/types";
 
 const ok = (result: unknown) => ({
   isSuccess: true,
@@ -1414,6 +1413,72 @@ const MY_PROFILE: MyProfile = {
 handlers.push(
   http.get("/me/profile", () => {
     return HttpResponse.json(ok(MY_PROFILE), { status: 200 });
+  }),
+);
+
+const repostStateByFeedId = new Map<number, boolean>();
+
+function setRepost(feedId: number, v: boolean) {
+  repostStateByFeedId.set(feedId, v);
+}
+function getRepost(feedId: number) {
+  return repostStateByFeedId.get(feedId) ?? false;
+}
+
+// 리포스트
+handlers.push(
+  http.post("/community/repost", async ({ request }) => {
+    const body = (await request.json()) as {
+      kind: "REPOST";
+      content_type: "POST" | "REVIEW";
+      originalFeedId: number;
+    };
+
+    const feedId = Number(body.originalFeedId);
+    if (!feedId) {
+      return HttpResponse.json(
+        {
+          isSuccess: false,
+          code: 4000,
+          message: "originalFeedId가 필요합니다.",
+          timestamp: new Date().toISOString(),
+          result: null,
+        },
+        { status: 400 },
+      );
+    }
+
+    setRepost(feedId, true);
+
+    return HttpResponse.json(
+      {
+        isSuccess: true,
+        code: 1000,
+        message: "요청에 성공하였습니다.",
+        timestamp: new Date().toISOString(),
+        result: "리포스트에 성공하였습니다.",
+      },
+      { status: 200 },
+    );
+  }),
+);
+
+// 리포스트 취소
+handlers.push(
+  http.delete("/community/repost/:feedId", ({ params }) => {
+    const feedId = Number(params.feedId);
+    setRepost(feedId, false);
+
+    return HttpResponse.json(
+      {
+        isSuccess: true,
+        code: 1000,
+        message: "요청에 성공하였습니다.",
+        timestamp: new Date().toISOString(),
+        result: "리포스트 취소에 성공하였습니다.",
+      },
+      { status: 200 },
+    );
   }),
 );
 

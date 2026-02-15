@@ -98,7 +98,6 @@ function mapApiCommentToUiComment(c: ApiComment): CommentItem {
     commentId: c.commentId,
     user: mapApiUser(c.user),
 
-    // 기존 UI에서 사용하던 quote는 replyTo.name으로 유지 (없으면 "")
     quote: replyTo?.name ?? "",
 
     content: c.content,
@@ -118,7 +117,6 @@ function mapApiCommentToUiComment(c: ApiComment): CommentItem {
       isreposted: false,
     },
 
-    // 기존 “답글 n개 더보기” 로직이 item.comment를 보게 되어있으니 유지
     comment: replies,
   };
 }

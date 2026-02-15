@@ -10,6 +10,7 @@ type Props = {
   // icons
   commentIcon: string;
   quotationIcon: string;
+  completeRepostIcon: string;
   goodOnIcon: string;
   goodOffIcon: string;
   badOnIcon: string;
@@ -22,6 +23,7 @@ type Props = {
   onToggleDislike: () => void;
   onToggleBookmark: () => void;
   onClickComment?: () => void;
+  onClickQuote?: () => void;
 };
 
 export default function FeedActions({
@@ -32,6 +34,7 @@ export default function FeedActions({
 
   commentIcon,
   quotationIcon,
+  completeRepostIcon,
   goodOnIcon,
   goodOffIcon,
   badOnIcon,
@@ -44,6 +47,7 @@ export default function FeedActions({
   onToggleDislike,
   onToggleBookmark,
   onClickComment,
+  onClickQuote,
 }: Props) {
   return (
     <div className="px-4 pb-4 pt-2 flex flex-col">
@@ -74,11 +78,18 @@ export default function FeedActions({
           {/* 인용 */}
           <button
             type="button"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClickQuote?.();
+            }}
             className="flex items-center gap-[3px] leading-none"
           >
             <span className="w-6 h-6 flex items-center justify-center shrink-0">
-              <img src={quotationIcon} alt="인용수" className="w-6 h-6 block" />
+              <img
+                src={myState.isreposted ? completeRepostIcon : quotationIcon}
+                alt="인용수"
+                className="w-6 h-6 block"
+              />
             </span>
             <span className="text-[13px] leading-none">{counts.quotes}</span>
           </button>
