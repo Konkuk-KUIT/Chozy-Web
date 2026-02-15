@@ -63,6 +63,7 @@ export default function PostDetail() {
 
   const [replyTarget, setReplyTarget] = useState<ReplyTarget>(null);
   const commentInputRef = useRef<HTMLInputElement | null>(null);
+  const [isMine, setIsMine] = useState(false);
 
   // 작성일/조회수 (명세 기반)
   const [createdAt, setCreatedAt] = useState<string>("");
@@ -94,6 +95,7 @@ export default function PostDetail() {
           setIsFollowing(data.result.feed.myState.isFollowing);
           setCreatedAt(formatKoreanDateTime(data.result.feed.createdAt));
           setViewCount(data.result.feed.counts.viewCount);
+          setIsMine(data.result.feed.isMine);
         } else {
           setDetail(null);
           setComments([]);
@@ -377,6 +379,8 @@ export default function PostDetail() {
       <div className="flex-1 min-h-0 scroll-available overflow-y-auto scrollbar-hide pb-15">
         <div className="bg-white">
           <FeedHeader
+            feedId={Number(feedId)}
+            isMine={isMine}
             user={feed.user}
             isFollowing={isFollowing}
             onToggleFollow={handleToggleFollow}
