@@ -1421,9 +1421,6 @@ const repostStateByFeedId = new Map<number, boolean>();
 function setRepost(feedId: number, v: boolean) {
   repostStateByFeedId.set(feedId, v);
 }
-function getRepost(feedId: number) {
-  return repostStateByFeedId.get(feedId) ?? false;
-}
 
 // 리포스트
 handlers.push(
