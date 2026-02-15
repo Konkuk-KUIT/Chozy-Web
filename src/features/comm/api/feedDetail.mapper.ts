@@ -8,6 +8,8 @@ import type {
   FeedDetail,
   CommentItem,
   FeedDetailResult,
+  Mention,
+  ReplyTo,
 } from "../types";
 
 function mapApiUser(u: ApiFeedUser): FeedUser {
@@ -74,35 +76,34 @@ function mapApiFeedToUiFeed(api: ApiFeed): FeedDetail {
   };
 }
 
+function mapMentions(ms: ApiComment["mentions"]): Mention[] {
+  return (ms ?? []).map((m) => ({
+    userId: m.userId,
+    name: m.name,
+    startIndex: m.startIndex,
+    length: m.length,
+  }));
+}
+
+function mapReplyTo(rt: ApiComment["replyTo"]): ReplyTo {
+  return rt ? { userId: rt.userId, name: rt.name } : null;
+}
+
 function mapApiCommentToUiComment(c: ApiComment): CommentItem {
-  const replies = (c.commentReflies ?? []).map((r) => {
-    const replyItem: CommentItem = {
-      commentId: r.commentReflyId,
-      user: mapApiUser(r.user),
-      quote: r.mentionedUserName ? `${r.mentionedUserName}` : "",
-      content: r.content,
-      createdAt: r.createdAt,
-      counts: {
-        comments: r.counts.replyCount,
-        likes: r.counts.likeCount,
-        dislikes: r.counts.dislikeCount,
-        quotes: 0,
-      },
-      myState: {
-        reaction: r.reactionType,
-        isbookmarked: false,
-        isreposted: false,
-      },
-      comment: [],
-    };
-    return replyItem;
-  });
+  const replies = (c.replies ?? []).map(mapApiCommentToUiComment);
+
+  const replyTo = mapReplyTo(c.replyTo);
 
   return {
     commentId: c.commentId,
     user: mapApiUser(c.user),
-    quote: c.mentionedUserName ? `${c.mentionedUserName}` : "",
+
+    quote: replyTo?.name ?? "",
+
     content: c.content,
+    replyTo,
+    mentions: mapMentions(c.mentions),
+
     createdAt: c.createdAt,
     counts: {
       comments: c.counts.replyCount,
@@ -111,10 +112,11 @@ function mapApiCommentToUiComment(c: ApiComment): CommentItem {
       quotes: 0,
     },
     myState: {
-      reaction: c.reactionType,
+      reaction: c.myState.reactionType,
       isbookmarked: false,
       isreposted: false,
     },
+
     comment: replies,
   };
 }
