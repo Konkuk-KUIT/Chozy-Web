@@ -1,9 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import logoIcon from "../../assets/login/logo.svg";
 import cancelIcon from "../../assets/all/cancel.svg";
 import eyeIcon from "../../assets/login/eye.svg";
+import naverIcon from "../../assets/login/naver.svg";
+import kakaoIcon from "../../assets/login/kakao.svg";
+
+// 카카오 SDK 타입 선언
+declare global {
+  interface Window {
+    Kakao: any;
+  }
+}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -42,6 +51,40 @@ export default function Login() {
 
   const handleGuestAccess = () => {
     navigate("/");
+  };
+
+  // 카카오 로그인 초기화 및 SDK 로드
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://developers.kakao.com/sdk/js/kakao.min.js";
+    script.async = true;
+    script.onload = () => {
+      // 카카오 SDK 초기화 (REST API 키 필요)
+      if (window.Kakao && !window.Kakao.isInitialized()) {
+        window.Kakao.init(import.meta.env.VITE_KAKAO_APP_ID);
+      }
+    };
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(script);
+    };
+  }, []);
+
+  const handleKakaoLogin = () => {
+    if (window.Kakao) {
+      window.Kakao.Auth.login({
+        success: (authObj: any) => {
+          console.log("카카오 로그인 성공:", authObj);
+          // 로그인 성공 시 온보딩 페이지로 이동
+          navigate("/onboarding");
+        },
+        fail: (err: any) => {
+          console.error("카카오 로그인 실패:", err);
+          showToast("카카오 로그인에 실패했어요.");
+        },
+      });
+    }
   };
 
   return (
@@ -131,7 +174,7 @@ export default function Login() {
           {/* 로그인 버튼 */}
           <button
             type="submit"
-            className={`mt-10 h-12 flex justify-center items-center rounded text-white text-base font-medium font-['Pretendard'] transition-all 
+            className={`mt-3 h-12 flex justify-center items-center rounded text-white text-base font-medium font-['Pretendard'] transition-all 
       ${isFormValid ? "bg-rose-900 hover:bg-rose-800" : "bg-zinc-300 cursor-not-allowed"}`}
             disabled={!isFormValid}
           >
@@ -148,6 +191,15 @@ export default function Login() {
           </button>
         </div>
       </form>
+
+      <div className="flex gap-2 mt-15">
+        <button type="button" onClick={() => {}}>
+          <img src={naverIcon} className="w-12 h-12" />
+        </button>
+        <button type="button" onClick={handleKakaoLogin}>
+          <img src={kakaoIcon} className="w-12 h-12" />
+        </button>
+      </div>
 
       {/* 비회원 메시지 */}
       <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex text-center">
