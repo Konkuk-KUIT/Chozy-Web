@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { login } from "../../api/auth";
+import { login, KAKAO_AUTH_URL } from "../../api/auth";
 
 import logoIcon from "../../assets/login/logo.svg";
 import cancelIcon from "../../assets/all/cancel.svg";
@@ -89,7 +89,6 @@ export default function Login() {
   };
 
   const handleKakaoLogin = () => {
-    const KAKAO_AUTH_URL = "전체_URL"; // 백엔드에서 URL 받으면 바로 수정 예정!
     window.location.href = KAKAO_AUTH_URL;
   };
 
