@@ -1372,49 +1372,49 @@ handlers.push(
 );
 
 // 마이페이지 메인화면
-type MyProfile = {
-  loginId: string;
-  nickname: string;
-  profileImageUrl: string | null;
-  backgroundImageUrl: string | null;
-  statusMessage: string;
-  isAccountPublic: boolean;
-  birthDate: string; // "YYYY-MM-DD"
-  heightCm: number;
-  weightKg: number;
-  isBirthPublic: boolean;
-  isHeightPublic: boolean;
-  isWeightPublic: boolean;
-  followerCount: number;
-  followingCount: number;
-  reviewCount: number;
-  bookmarkCount: number;
-};
+// type MyProfile = {
+//   loginId: string;
+//   nickname: string;
+//   profileImageUrl: string | null;
+//   backgroundImageUrl: string | null;
+//   statusMessage: string;
+//   isAccountPublic: boolean;
+//   birthDate: string; // "YYYY-MM-DD"
+//   heightCm: number;
+//   weightKg: number;
+//   isBirthPublic: boolean;
+//   isHeightPublic: boolean;
+//   isWeightPublic: boolean;
+//   followerCount: number;
+//   followingCount: number;
+//   reviewCount: number;
+//   bookmarkCount: number;
+// };
 
-const MY_PROFILE: MyProfile = {
-  loginId: "abc123",
-  nickname: "minseok",
-  profileImageUrl: null,
-  backgroundImageUrl: null,
-  statusMessage: "오늘도 한 걸음",
-  isAccountPublic: true,
-  birthDate: "2001-05-03",
-  heightCm: 175,
-  weightKg: 70,
-  isBirthPublic: false,
-  isHeightPublic: true,
-  isWeightPublic: false,
-  followerCount: 10,
-  followingCount: 22,
-  reviewCount: 37,
-  bookmarkCount: 15,
-};
+// const MY_PROFILE: MyProfile = {
+//   loginId: "abc123",
+//   nickname: "minseok",
+//   profileImageUrl: null,
+//   backgroundImageUrl: null,
+//   statusMessage: "오늘도 한 걸음",
+//   isAccountPublic: true,
+//   birthDate: "2001-05-03",
+//   heightCm: 175,
+//   weightKg: 70,
+//   isBirthPublic: false,
+//   isHeightPublic: true,
+//   isWeightPublic: false,
+//   followerCount: 10,
+//   followingCount: 22,
+//   reviewCount: 37,
+//   bookmarkCount: 15,
+// };
 
-handlers.push(
-  http.get("/me/profile", () => {
-    return HttpResponse.json(ok(MY_PROFILE), { status: 200 });
-  }),
-);
+// handlers.push(
+//   http.get("/me/profile", () => {
+//     return HttpResponse.json(ok(MY_PROFILE), { status: 200 });
+//   }),
+// );
 
 const repostStateByFeedId = new Map<number, boolean>();
 

@@ -22,6 +22,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
       },
+      "/me": {
+        target: "https://chozy.net",
+        changeOrigin: true,
+        secure: true,
+      },
     },
   },
 });

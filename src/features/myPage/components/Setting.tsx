@@ -108,12 +108,14 @@ export default function Setting() {
           </button>
           <button
             type="button"
+            onClick={() => navigate("/mypage/service")}
             className="w-full text-left py-4 text-[#191919] text-[16px]"
           >
             서비스 이용약관
           </button>
           <button
             type="button"
+            onClick={() => navigate("/mypage/privacy")}
             className="w-full text-left py-4 text-[#191919] text-[16px]"
           >
             개인정보 처리방침

@@ -67,6 +67,8 @@ export default function AppRouter() {
       <Route path="/mypage/blocked" element={<BlockedAccounts />} />
       <Route path="/mypage/withdraw" element={<WithdrawAccount />} />
       <Route path="/mypage/withdraw/complete" element={<WithdrawComplete />} />
+      <Route path="/mypage/service" element={<ServiceTerms />} />
+      <Route path="/mypage/privacy" element={<PrivacyPolicy />} />
     </Routes>
   );
 }
