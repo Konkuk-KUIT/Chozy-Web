@@ -57,7 +57,7 @@ export const sendVerificationEmail = async (email: string) => {
 };
 
 // 이메일 인증 번호 검증 API
-export const verifyEmail = async (email: string, code: number) => {
+export const verifyEmail = async (email: string, code: string) => {
   // 명세서: POST /auth/email/verify
   const response = await axiosInstance.post("/auth/email/verify", {
     email,
