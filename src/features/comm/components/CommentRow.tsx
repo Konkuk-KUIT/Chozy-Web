@@ -1,7 +1,6 @@
 import { useMemo, useState, useRef, useLayoutEffect } from "react";
 import etc from "../../../assets/community/etc.svg";
 import comment from "../../../assets/community/comment.svg";
-import quotation from "../../../assets/community/quotation.svg";
 import goodOn from "../../../assets/community/good-on.svg";
 import goodOff from "../../../assets/community/good-off.svg";
 import badOn from "../../../assets/community/bad-on.svg";

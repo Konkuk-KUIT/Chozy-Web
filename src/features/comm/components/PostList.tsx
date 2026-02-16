@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import StarRating from "./StarRating";
@@ -255,11 +255,11 @@ export default function PostList({ tab, contentType }: PostProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
-  const hasToken = useMemo(
-    () => !!localStorage.getItem("accessToken"),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
+  // const hasToken = useMemo(
+  //   () => !!localStorage.getItem("accessToken"),
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  //   [],
+  // );
 
   const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
