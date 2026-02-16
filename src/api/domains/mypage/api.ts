@@ -3,6 +3,6 @@ import type { ApiResponse } from "../../client/types";
 import type { MyProfile } from "./types";
 
 export async function getMyProfile() {
-  const res = await apiClient.get<ApiResponse<MyProfile>>("api/me/profile");
+  const res = await apiClient.get<ApiResponse<MyProfile>>("/me/profile");
   return res.data;
 }

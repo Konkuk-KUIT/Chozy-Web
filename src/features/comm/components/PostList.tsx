@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import StarRating from "./StarRating";
+import ShareBottomSheet from "./ShareBottomSheet";
+
 import comment from "../../../assets/community/comment.svg";
 import quotation from "../../../assets/community/quotation.svg";
 import goodOn from "../../../assets/community/good-on.svg";
@@ -10,8 +13,9 @@ import badOff from "../../../assets/community/bad-off.svg";
 import bookmarkOn from "../../../assets/community/bookmark-on.svg";
 import bookmarkOff from "../../../assets/community/bookmark-off.svg";
 import share from "../../../assets/community/repost.svg";
-import ShareBottomSheet from "./ShareBottomSheet";
 import load from "../../../assets/community/loading.svg";
+
+import { communityApi } from "../../../api";
 
 type Tab = "RECOMMEND" | "FOLLOWING";
 type ContentType = "ALL" | "POST" | "REVIEW";
@@ -30,6 +34,10 @@ type ApiResponse<T> = {
   result: T;
 };
 
+/**
+ * ===== UI(기존 컴포넌트가 기대하는) 타입들 =====
+ * - 서버 응답을 그대로 쓰지 않고, 아래 UI 타입으로 매핑해서 기존 렌더 코드를 최대한 유지함
+ */
 type FeedUser = {
   profileImg: string;
   userName: string;
@@ -98,8 +106,148 @@ function hasQuoteContent(
   return "quoteContent" in c && !!(c as any).quoteContent;
 }
 
+/**
+ * ===== 서버 응답 최소 타입(필요한 것만) =====
+ * 명세 JSON 형식 기준
+ */
+type CursorResult<T> = {
+  feeds: T[];
+  hasNext: boolean;
+  nextCursor: string | null;
+};
+
+type ServerFeedItem = {
+  feedId: number;
+  kind: "ORIGINAL" | "QUOTE";
+  contentType: "POST" | "REVIEW";
+  isMine: boolean;
+  createdAt: string;
+
+  user: {
+    name: string;
+    userId: string;
+    profileImageUrl: string | null;
+  };
+
+  contents: {
+    text: string;
+    images: { imageUrl: string }[];
+
+    review?: {
+      vendor: string;
+      title: string;
+      rating: number;
+      productUrl: string | null;
+    } | null;
+
+    quote?: {
+      feedId: number;
+      user: {
+        name: string;
+        userId: string;
+        profileImageUrl: string | null;
+      };
+      text: string;
+      hashTags: string[];
+    } | null;
+  };
+
+  counts: {
+    viewCount: number;
+    commentCount: number;
+    likeCount: number;
+    dislikeCount: number;
+    quoteCount: number;
+  };
+
+  myState?: {
+    reactionType: Reaction;
+    isBookmarked: boolean;
+    isReposted: boolean;
+    isFollowing: boolean;
+  } | null;
+};
+
+const DEFAULT_MY_STATE: FeedMyState = {
+  reaction: "NONE",
+  isbookmarked: false,
+  isreposted: false,
+};
+
+function toUiItem(s: ServerFeedItem): FeedItem {
+  const contentImgs = (s.contents.images ?? [])
+    .map((img) => img.imageUrl)
+    .filter(Boolean);
+
+  const myState = s.myState ?? null;
+
+  const uiBase: FeedItemBase = {
+    feedId: s.feedId,
+    user: {
+      profileImg: s.user.profileImageUrl ?? "",
+      userName: s.user.name,
+      userId: s.user.userId,
+    },
+    counts: {
+      comments: s.counts.commentCount,
+      likes: s.counts.likeCount,
+      dislikes: s.counts.dislikeCount,
+      quotes: s.counts.quoteCount,
+    },
+    myState: myState
+      ? {
+          reaction: myState.reactionType,
+          isbookmarked: myState.isBookmarked,
+          isreposted: myState.isReposted,
+        }
+      : DEFAULT_MY_STATE,
+  };
+
+  if (s.contentType === "POST") {
+    return {
+      ...uiBase,
+      type: "POST",
+      content: {
+        text: s.contents.text,
+        contentImgs,
+      },
+    };
+  }
+
+  // REVIEW
+  return {
+    ...uiBase,
+    type: "REVIEW",
+    content: {
+      vendor: s.contents.review?.vendor ?? "",
+      title: s.contents.review?.title ?? "",
+      rating: s.contents.review?.rating ?? 0,
+      text: s.contents.text,
+      contentImgs,
+
+      ...(s.kind === "QUOTE" && s.contents.quote
+        ? {
+            quoteContent: {
+              vendor: s.contents.review?.vendor ?? "",
+              title: s.contents.review?.title ?? "",
+              rating: s.contents.review?.rating ?? 0,
+              text: s.contents.quote.text ?? "",
+              contentImgs: [],
+              user: {
+                profileImg: s.contents.quote.user.profileImageUrl ?? "",
+                userName: s.contents.quote.user.name,
+                userId: s.contents.quote.user.userId,
+              },
+            },
+          }
+        : {}),
+    },
+  };
+}
+
 export default function PostList({ tab, contentType }: PostProps) {
   const navigate = useNavigate();
+
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -107,19 +255,23 @@ export default function PostList({ tab, contentType }: PostProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
+  const hasToken = useMemo(
+    () => !!localStorage.getItem("accessToken"),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
   const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   const buildShareUrl = (feedId: number) => {
-    // 배포 링크 고정하고 싶으면 이거 추천:
+    // 배포 링크 고정(원하면 window.location.origin로 변경 가능)
     return `https://chozy.net/community/feeds/${feedId}`;
-    // 개발/배포 자동:
-    // return `${window.location.origin}/community/feeds/${feedId}`;
   };
 
   const handleShare = async (feedId: number) => {
     const url = buildShareUrl(feedId);
 
-    // ✅ 폰 + Web Share 지원이면 -> OS 공유 시트(카톡/메시지 등)
+    // ✅ 폰 + Web Share 지원이면 -> OS 공유 시트
     if (isMobile() && navigator.share) {
       try {
         await navigator.share({
@@ -129,13 +281,13 @@ export default function PostList({ tab, contentType }: PostProps) {
         });
         return;
       } catch (e) {
-        // 사용자가 취소해도 여기로 올 수 있음(정상)
+        // 취소해도 정상 흐름
         console.log("share cancelled/failed:", e);
         return;
       }
     }
 
-    // ✅ PC(또는 미지원) -> 바텀시트(링크복사만)
+    // ✅ PC(또는 미지원) -> 바텀시트(링크복사)
     setShareUrl(url);
     setShareOpen(true);
   };
@@ -144,13 +296,23 @@ export default function PostList({ tab, contentType }: PostProps) {
     const run = async () => {
       try {
         setLoading(true);
-        const res = await fetch(
-          `/community/feeds?tab=${tab}&contentType=${contentType}`,
-        );
-        const data: ApiResponse<FeedItem[]> = await res.json();
 
-        if (data.code === 1000) setItems(data.result);
-        else setItems([]);
+        const data = await communityApi.feedsApi.getFeeds({
+          tab,
+          contentType,
+        });
+
+        if (data.code !== 1000) {
+          setItems([]);
+          return;
+        }
+
+        const result = data.result as CursorResult<ServerFeedItem>;
+        const nextItems = (result.feeds ?? []).map(toUiItem);
+        setItems(nextItems);
+      } catch (e) {
+        console.error(e);
+        setItems([]);
       } finally {
         setLoading(false);
       }
@@ -161,12 +323,23 @@ export default function PostList({ tab, contentType }: PostProps) {
 
   // 게시글 좋아요/싫어요 토글
   const handleToggleReaction = async (feedId: number, like: boolean) => {
+    // 비로그인이라면 로그인 유도
+    if (!localStorage.getItem("accessToken")) {
+      navigate("/login");
+      return;
+    }
+
     try {
       const res = await fetch(`/community/feeds/${feedId}/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ like }),
       });
+
+      if (res.status === 401) {
+        navigate("/login");
+        return;
+      }
       if (!res.ok) throw new Error("toggle reaction failed");
 
       const data: ApiResponse<LikeToggleResult> = await res.json();
@@ -197,6 +370,12 @@ export default function PostList({ tab, contentType }: PostProps) {
 
   // 게시글 북마크 토글
   const handleToggleBookmark = async (feedId: number, current: boolean) => {
+    // 비로그인이라면 로그인 유도
+    if (!localStorage.getItem("accessToken")) {
+      navigate("/login");
+      return;
+    }
+
     const nextValue = !current;
 
     try {
@@ -206,6 +385,10 @@ export default function PostList({ tab, contentType }: PostProps) {
         body: JSON.stringify({ bookmark: nextValue }),
       });
 
+      if (res.status === 401) {
+        navigate("/login");
+        return;
+      }
       if (!res.ok) throw new Error("toggle bookmark failed");
 
       const data: ApiResponse<BookmarkToggleResult> = await res.json();
@@ -229,6 +412,8 @@ export default function PostList({ tab, contentType }: PostProps) {
     }
   };
 
+  // NOTE: 서버가 contentType 필터링을 이미 해줄 수 있지만,
+  // UI에서 한 번 더 안전하게 필터링
   const filteredItems = items.filter((item) => {
     if (contentType === "ALL") return true;
     return item.type === contentType;
@@ -312,7 +497,7 @@ export default function PostList({ tab, contentType }: PostProps) {
               )}
             </div>
 
-            {/* 인용 글일 결우 */}
+            {/* 인용 글일 경우 */}
             {hasQuoteContent(item.content) && (
               <div className="mt-5 rounded-[4px] border border-[#DADADA] px-[8px] py-3">
                 <div className="flex flex-row gap-[8px] mb-[8px]">
@@ -447,7 +632,7 @@ export default function PostList({ tab, contentType }: PostProps) {
                 </button>
               </div>
 
-              {/* 북마크 */}
+              {/* 북마크 + 공유 */}
               <div className="flex gap-[8px]">
                 <button
                   type="button"
@@ -466,10 +651,11 @@ export default function PostList({ tab, contentType }: PostProps) {
                     className="w-6 h-6 block"
                   />
                 </button>
+
                 <button
                   type="button"
                   onClick={(e) => {
-                    e.stopPropagation(); // 카드 상세 이동 방지
+                    e.stopPropagation();
                     handleShare(item.feedId);
                   }}
                   className="w-6 h-6 flex items-center justify-center shrink-0"
@@ -481,6 +667,7 @@ export default function PostList({ tab, contentType }: PostProps) {
           </div>
         ))}
       </div>
+
       <ShareBottomSheet
         open={shareOpen}
         onOpenChange={setShareOpen}

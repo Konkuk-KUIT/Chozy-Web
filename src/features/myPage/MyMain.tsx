@@ -116,7 +116,7 @@ function MyMain() {
             >
               {isLoggedIn ? nickname : "로그인이 필요합니다."}
             </div>
-            {loginId ?? (
+            {loginId && (
               <div className="text-[14px] text-[#B5B5B5] font-medium">
                 @{loginId}
               </div>

@@ -280,7 +280,7 @@ export default function CommentRow({
               </button>
 
               {/* 인용 */}
-              <button
+              {/* <button
                 type="button"
                 onClick={(e) => e.stopPropagation()}
                 className="flex items-center gap-[3px] leading-none"
@@ -291,7 +291,7 @@ export default function CommentRow({
                 <span className="text-[13px] leading-none">
                   {item.counts.quotes}
                 </span>
-              </button>
+              </button> */}
 
               {/* 좋아요 */}
               <button
