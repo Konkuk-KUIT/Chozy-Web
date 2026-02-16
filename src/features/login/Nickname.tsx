@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { completeOnboarding } from "../../api/auth";
+import { useNavigate, useLocation } from "react-router-dom";
+import { completeOnboarding, signUp } from "../../api/auth";
 import DetailHeader from "../../components/DetailHeader";
 import SubmitButton from "../../components/SubmitButton";
 import cancelIcon from "../../assets/all/cancel.svg";
 
 export default function Nickname() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const prevData = location.state; // SignUp.tsx에서 넘어온 데이터
+
   const [nickname, setNickname] = useState("");
   const [nicknameErrors, setNicknameErrors] = useState<string[]>([]);
 
@@ -46,16 +49,22 @@ export default function Nickname() {
     if (!isFormValid) return;
 
     try {
-      // 서버에 닉네임 저장 요청 (온보딩 API 호출)
-      const response = await completeOnboarding(nickname);
+      if (prevData) {
+        // Case 1: 내부 회원가입 경로 (SignUp.tsx에서 데이터를 들고 온 경우)
+        const signUpData = { ...prevData, nickname };
+        const response = await signUp(signUpData);
 
-      if (response.isSuccess) {
-        // 성공 시 회원가입 완료 페이지로 이동
-        navigate("/login/complete");
+        if (response.isSuccess) navigate("/login/complete");
+      } else {
+        // Case 2: 카카오 로그인 경로 (이전 데이터가 없는 경우)
+        const response = await completeOnboarding(nickname);
+
+        if (response.isSuccess) navigate("/login/complete");
       }
     } catch (error: any) {
-      // 닉네임 중복 등 에러 처리
-      if (error.response?.data?.code === 4094) {
+      const errorCode = error.response?.data?.code;
+      // 명세서의 에러 코드 처리
+      if (errorCode === 4094) {
         alert("이미 사용 중인 닉네임이에요.");
       } else {
         alert("문제가 발생했습니다. 다시 시도해주세요.");
