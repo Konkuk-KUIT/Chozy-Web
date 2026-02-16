@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import DetailHeader from "../../../components/DetailHeader";
 import toastmsg from "../../../assets/community/toastmsg.svg";
+import { authApi } from "../../../api";
 
 export default function Setting() {
   const navigate = useNavigate();
@@ -25,6 +26,19 @@ export default function Setting() {
 
       return next;
     });
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("tokenType");
+
+      navigate("/login", { replace: true });
+    }
   };
 
   return (
@@ -86,6 +100,7 @@ export default function Setting() {
           </button>
           <button
             type="button"
+            onClick={handleLogout}
             className="w-full text-left py-4 text-[#191919] text-[16px]"
           >
             로그아웃

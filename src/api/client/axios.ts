@@ -1,10 +1,9 @@
-// 로그인 API 연동 전 다른 기능 테스트 위한 토큰 발급
 import axios from "axios";
 import { getAccessToken, getTokenType } from "./auth";
 
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? "https://chozy.net",
-  withCredentials: false, // 서버 정책에 맞게
+  withCredentials: false,
 });
 
 // 요청마다 토큰 자동 주입
