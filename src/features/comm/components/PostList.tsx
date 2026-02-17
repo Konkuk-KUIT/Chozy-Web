@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import StarRating from "./StarRating";
+import ShareBottomSheet from "./ShareBottomSheet";
+
 import comment from "../../../assets/community/comment.svg";
 import quotation from "../../../assets/community/quotation.svg";
 import goodOn from "../../../assets/community/good-on.svg";
@@ -10,16 +13,19 @@ import badOff from "../../../assets/community/bad-off.svg";
 import bookmarkOn from "../../../assets/community/bookmark-on.svg";
 import bookmarkOff from "../../../assets/community/bookmark-off.svg";
 import share from "../../../assets/community/repost.svg";
-import ShareBottomSheet from "./ShareBottomSheet";
 import load from "../../../assets/community/loading.svg";
 
-type Tab = "RECOMMEND" | "FOLLOWING";
+import { toUiFeedItem } from "../../../api/domains/mypage/mapper";
+
 type ContentType = "ALL" | "POST" | "REVIEW";
 type Reaction = "LIKE" | "DISLIKE" | "NONE";
+type EmptyVariant = "community" | "mypage";
 
-type PostProps = {
-  tab: Tab;
+type PostListProps = {
   contentType: ContentType;
+  fetchFeeds: () => Promise<{ code: number; result: { feeds: any[] } }>;
+  emptyVariant?: EmptyVariant;
+  emptyText?: string;
 };
 
 type ApiResponse<T> = {
@@ -30,6 +36,10 @@ type ApiResponse<T> = {
   result: T;
 };
 
+/**
+ * ===== UI(기존 컴포넌트가 기대하는) 타입들 =====
+ * - 서버 응답을 그대로 쓰지 않고, 아래 UI 타입으로 매핑해서 기존 렌더 코드를 최대한 유지함
+ */
 type FeedUser = {
   profileImg: string;
   userName: string;
@@ -98,8 +108,14 @@ function hasQuoteContent(
   return "quoteContent" in c && !!(c as any).quoteContent;
 }
 
-export default function PostList({ tab, contentType }: PostProps) {
+export default function PostList({
+  contentType,
+  fetchFeeds,
+  emptyVariant,
+  emptyText,
+}: PostListProps) {
   const navigate = useNavigate();
+
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -107,19 +123,23 @@ export default function PostList({ tab, contentType }: PostProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
+  // const hasToken = useMemo(
+  //   () => !!localStorage.getItem("accessToken"),
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  //   [],
+  // );
+
   const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   const buildShareUrl = (feedId: number) => {
-    // 배포 링크 고정하고 싶으면 이거 추천:
+    // 배포 링크 고정(원하면 window.location.origin로 변경 가능)
     return `https://chozy.net/community/feeds/${feedId}`;
-    // 개발/배포 자동:
-    // return `${window.location.origin}/community/feeds/${feedId}`;
   };
 
   const handleShare = async (feedId: number) => {
     const url = buildShareUrl(feedId);
 
-    // ✅ 폰 + Web Share 지원이면 -> OS 공유 시트(카톡/메시지 등)
+    // ✅ 폰 + Web Share 지원이면 -> OS 공유 시트
     if (isMobile() && navigator.share) {
       try {
         await navigator.share({
@@ -129,13 +149,13 @@ export default function PostList({ tab, contentType }: PostProps) {
         });
         return;
       } catch (e) {
-        // 사용자가 취소해도 여기로 올 수 있음(정상)
+        // 취소해도 정상 흐름
         console.log("share cancelled/failed:", e);
         return;
       }
     }
 
-    // ✅ PC(또는 미지원) -> 바텀시트(링크복사만)
+    // ✅ PC(또는 미지원) -> 바텀시트(링크복사)
     setShareUrl(url);
     setShareOpen(true);
   };
@@ -144,29 +164,47 @@ export default function PostList({ tab, contentType }: PostProps) {
     const run = async () => {
       try {
         setLoading(true);
-        const res = await fetch(
-          `/community/feeds?tab=${tab}&contentType=${contentType}`,
-        );
-        const data: ApiResponse<FeedItem[]> = await res.json();
 
-        if (data.code === 1000) setItems(data.result);
-        else setItems([]);
+        const data = await fetchFeeds();
+
+        if (data.code !== 1000) {
+          setItems([]);
+          return;
+        }
+
+        const result = data.result;
+        const nextItems = (result.feeds ?? []).map(toUiFeedItem);
+        setItems(nextItems);
+      } catch (e) {
+        console.error(e);
+        setItems([]);
       } finally {
         setLoading(false);
       }
     };
 
     run();
-  }, [tab, contentType]);
+  }, [fetchFeeds]);
 
   // 게시글 좋아요/싫어요 토글
   const handleToggleReaction = async (feedId: number, like: boolean) => {
+    // 비로그인이라면 로그인 유도
+    if (!localStorage.getItem("accessToken")) {
+      navigate("/login");
+      return;
+    }
+
     try {
       const res = await fetch(`/community/feeds/${feedId}/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ like }),
       });
+
+      if (res.status === 401) {
+        navigate("/login");
+        return;
+      }
       if (!res.ok) throw new Error("toggle reaction failed");
 
       const data: ApiResponse<LikeToggleResult> = await res.json();
@@ -197,6 +235,12 @@ export default function PostList({ tab, contentType }: PostProps) {
 
   // 게시글 북마크 토글
   const handleToggleBookmark = async (feedId: number, current: boolean) => {
+    // 비로그인이라면 로그인 유도
+    if (!localStorage.getItem("accessToken")) {
+      navigate("/login");
+      return;
+    }
+
     const nextValue = !current;
 
     try {
@@ -206,6 +250,10 @@ export default function PostList({ tab, contentType }: PostProps) {
         body: JSON.stringify({ bookmark: nextValue }),
       });
 
+      if (res.status === 401) {
+        navigate("/login");
+        return;
+      }
       if (!res.ok) throw new Error("toggle bookmark failed");
 
       const data: ApiResponse<BookmarkToggleResult> = await res.json();
@@ -229,6 +277,8 @@ export default function PostList({ tab, contentType }: PostProps) {
     }
   };
 
+  // NOTE: 서버가 contentType 필터링을 이미 해줄 수 있지만,
+  // UI에서 한 번 더 안전하게 필터링
   const filteredItems = items.filter((item) => {
     if (contentType === "ALL") return true;
     return item.type === contentType;
@@ -238,12 +288,17 @@ export default function PostList({ tab, contentType }: PostProps) {
 
   if (!loading && filteredItems.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-45">
-        <img src={load} alt="로딩중" />
-        <p className="mt-6 text-[#787878] text-[16px] font-medium text-center leading-normal whitespace-pre-line">
-          {tab === "FOLLOWING"
-            ? "팔로우 중인 친구가 없어요.\n마음에 드는 이웃을 찾아보세요:)"
-            : "아직 게시글이 없어요.\n첫 글을 작성해보세요:)"}
+      <div className="flex flex-col items-center justify-center py-40">
+        {emptyVariant === "community" && <img src={load} alt="empty" />}
+
+        <p
+          className={
+            emptyVariant === "community"
+              ? "mt-6 text-[#787878] text-[16px] font-medium text-center leading-normal whitespace-pre-line"
+              : "mt-10 text-[#B5B5B5] text-[16px] font-medium text-center leading-normal whitespace-pre-line"
+          }
+        >
+          {emptyText ?? "목록이 없어요."}
         </p>
       </div>
     );
@@ -312,7 +367,7 @@ export default function PostList({ tab, contentType }: PostProps) {
               )}
             </div>
 
-            {/* 인용 글일 결우 */}
+            {/* 인용 글일 경우 */}
             {hasQuoteContent(item.content) && (
               <div className="mt-5 rounded-[4px] border border-[#DADADA] px-[8px] py-3">
                 <div className="flex flex-row gap-[8px] mb-[8px]">
@@ -447,7 +502,7 @@ export default function PostList({ tab, contentType }: PostProps) {
                 </button>
               </div>
 
-              {/* 북마크 */}
+              {/* 북마크 + 공유 */}
               <div className="flex gap-[8px]">
                 <button
                   type="button"
@@ -466,10 +521,11 @@ export default function PostList({ tab, contentType }: PostProps) {
                     className="w-6 h-6 block"
                   />
                 </button>
+
                 <button
                   type="button"
                   onClick={(e) => {
-                    e.stopPropagation(); // 카드 상세 이동 방지
+                    e.stopPropagation();
                     handleShare(item.feedId);
                   }}
                   className="w-6 h-6 flex items-center justify-center shrink-0"
@@ -481,6 +537,7 @@ export default function PostList({ tab, contentType }: PostProps) {
           </div>
         ))}
       </div>
+
       <ShareBottomSheet
         open={shareOpen}
         onOpenChange={setShareOpen}

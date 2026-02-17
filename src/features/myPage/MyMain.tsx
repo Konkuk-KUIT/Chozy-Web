@@ -1,50 +1,33 @@
 import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import Nav from "../../components/Nav";
 import Header from "./components/Header";
 import TabBar from "./components/TabBar";
 import bgLogo from "../../assets/mypage/bgLogo.svg";
 import defaultProfile from "../../assets/mypage/defaultProfile.svg";
 
-type ApiResponse<T> = {
-  isSuccess: boolean;
-  code: number;
-  message: string;
-  timestamp: string;
-  result: T;
-};
+import PostList from "../comm/components/PostList";
 
-type MyProfile = {
-  loginId: string;
-  nickname: string;
-  profileImageUrl: string | null;
-  backgroundImageUrl: string | null;
-  statusMessage: string;
-  isAccountPublic: boolean;
-  birthDate: string;
-  heightCm: number;
-  weightKg: number;
-  isBirthPublic: boolean;
-  isHeightPublic: boolean;
-  isWeightPublic: boolean;
-  followerCount: number;
-  followingCount: number;
-  reviewCount: number;
-  bookmarkCount: number;
-};
+import { mypageApi } from "../../api";
 
 type Tab = "reviews" | "bookmarks";
 
 function MyMain() {
-  const [profile, setProfile] = useState<MyProfile | null>(null);
+  const navigate = useNavigate();
+
+  const [profile, setProfile] = useState<mypageApi.MyProfile | null>(null);
   const [tab, setTab] = useState<Tab>("reviews");
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const run = async () => {
-      const res = await fetch("/me/profile");
-      const data: ApiResponse<MyProfile> = await res.json();
-      if (data.code === 1000) setProfile(data.result);
-      else setProfile(null);
+      try {
+        const data = await mypageApi.getMyProfile();
+        if (data.code === 1000) setProfile(data.result);
+        else setProfile(null);
+      } catch {
+        setProfile(null);
+      }
     };
     run();
   }, []);
@@ -65,6 +48,7 @@ function MyMain() {
     setTab(next);
   };
 
+  const isLoggedIn = !!profile?.loginId;
   const bgUrl = profile?.backgroundImageUrl ?? null; // 배경사진 있으면 그걸 쓰고 없으면 기본
   const profileImg = profile?.profileImageUrl ?? null;
   const statusMessage = profile?.statusMessage ?? "";
@@ -116,12 +100,29 @@ function MyMain() {
         <div className="px-4 pt-8 pb-5">
           {/* 닉네임/아이디 */}
           <div className="pl-[100px]">
-            <div className="text-[16px] font-semibold text-[#191919] mb-1">
-              {nickname}
+            <div
+              role={!isLoggedIn ? "button" : undefined}
+              tabIndex={!isLoggedIn ? 0 : -1}
+              onClick={() => {
+                if (!isLoggedIn) navigate("/login");
+              }}
+              onKeyDown={(e) => {
+                if (!isLoggedIn && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  navigate("/login");
+                }
+              }}
+              className={`text-[16px] font-semibold mb-1 text-[#191919] ${
+                !isLoggedIn ? "underline cursor-pointer" : ""
+              }`}
+            >
+              {isLoggedIn ? nickname : "로그인이 필요합니다."}
             </div>
-            <div className="text-[14px] text-[#B5B5B5] font-medium">
-              @{loginId}
-            </div>
+            {loginId && (
+              <div className="text-[14px] text-[#B5B5B5] font-medium">
+                @{loginId}
+              </div>
+            )}
           </div>
 
           {/* 버튼 + 카운트 */}
@@ -156,6 +157,25 @@ function MyMain() {
           </div>
         </div>
         <TabBar value={tab} onChange={handleTabChange} />
+      </div>
+      <div
+        ref={scrollRef}
+        className="bg-[#F9F9F9] scroll-available flex-1 overflow-y-auto scrollbar-hide"
+      >
+        <PostList
+          contentType="ALL"
+          fetchFeeds={() =>
+            tab === "reviews"
+              ? mypageApi.getMyFeeds({ page: 0, size: 20, sort: "latest" })
+              : mypageApi.getMyBookmarks({ page: 0, size: 20 })
+          }
+          emptyVariant="mypage"
+          emptyText={
+            tab === "reviews"
+              ? "아직 남긴 후기가 없어요.\n첫 후기를 남겨보세요!"
+              : "아직 북마크한 글이 없어요.\n나중에 다시 보고 싶은 글을 저장해보세요."
+          }
+        />
       </div>
       <Nav scrollTargetSelector=".scroll-available" />
     </>
