@@ -1,8 +1,8 @@
 import StarRating from "./StarRating";
-import type { FeedDetail } from "../types";
+import type { UiFeedDetail } from "../../../api/domains/community/feedDetail";
 
 type Props = {
-  feed: FeedDetail;
+  feed: UiFeedDetail;
 };
 
 export default function FeedBody({ feed }: Props) {

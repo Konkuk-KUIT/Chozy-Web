@@ -1,8 +1,11 @@
-import type { FeedCounts, FeedMyState } from "../types";
+import {
+  type UiFeedCounts,
+  type UiFeedMyState,
+} from "../../../api/domains/community/feedDetail";
 
 type Props = {
-  counts: FeedCounts;
-  myState: FeedMyState;
+  counts: UiFeedCounts;
+  myState: UiFeedMyState;
 
   createdAtText: string;
   viewCount: number;
@@ -143,6 +146,7 @@ export default function FeedActions({
             className="w-6 h-6 flex items-center justify-center shrink-0"
           >
             <img
+              key={myState.isbookmarked ? "bm-on" : "bm-off"}
               src={myState.isbookmarked ? bookmarkOnIcon : bookmarkOffIcon}
               alt="북마크"
               className="w-6 h-6 block"

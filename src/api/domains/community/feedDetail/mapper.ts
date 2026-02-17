@@ -1,26 +1,32 @@
+import dummyProfile from "../../../../assets/all/dummyProfile.svg";
+
 import type {
   ApiFeed,
   ApiFeedDetailResult,
   ApiFeedUser,
   ApiComment,
-  FeedUser,
-  FeedCounts,
-  FeedDetail,
-  CommentItem,
-  FeedDetailResult,
-  Mention,
-  ReplyTo,
-} from "../types";
+  UiFeedUser,
+  UiFeedCounts,
+  UiFeedDetail,
+  UiCommentItem,
+  UiMention,
+  UiReplyTo,
+  UiFeedDetailResult,
+} from "./types";
 
-function mapApiUser(u: ApiFeedUser): FeedUser {
+export function pickIsMine(feed: ApiFeed): boolean {
+  return Boolean(feed.isMine ?? feed.mine ?? false);
+}
+
+function mapApiUser(u: ApiFeedUser): UiFeedUser {
   return {
-    profileImg: u.profileImageUrl ?? "",
+    profileImg: u.profileImageUrl ?? dummyProfile,
     userName: u.name,
     userId: u.userId,
   };
 }
 
-function mapApiCountsToUiCounts(counts: ApiFeed["counts"]): FeedCounts {
+function mapCounts(counts: ApiFeed["counts"]): UiFeedCounts {
   return {
     comments: counts.commentCount,
     likes: counts.likeCount,
@@ -29,24 +35,25 @@ function mapApiCountsToUiCounts(counts: ApiFeed["counts"]): FeedCounts {
   };
 }
 
-function mapApiFeedToUiFeed(api: ApiFeed): FeedDetail {
+function mapFeed(api: ApiFeed): UiFeedDetail {
   const images =
     (api.contents.feedImages ?? [])
       .slice()
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((x) => x.imageUrl) ?? [];
+      .map((x) => x.imageUrl)
+      .filter(Boolean) ?? [];
 
-  const type = api.contentType === "REVIEW" ? "REVIEW" : "POST";
+  const type: "REVIEW" | "POST" =
+    api.contentType === "REVIEW" ? "REVIEW" : "POST";
 
   const base = {
     feedId: api.feedId,
-    type,
     user: mapApiUser(api.user),
-    counts: mapApiCountsToUiCounts(api.counts),
+    counts: mapCounts(api.counts),
     myState: {
       reaction: api.myState.reactionType,
-      isbookmarked: api.myState.isBookmarked,
-      isreposted: api.myState.isReposted,
+      isbookmarked: api.myState.bookmarked,
+      isreposted: api.myState.reposted,
     },
   } as const;
 
@@ -76,7 +83,7 @@ function mapApiFeedToUiFeed(api: ApiFeed): FeedDetail {
   };
 }
 
-function mapMentions(ms: ApiComment["mentions"]): Mention[] {
+function mapMentions(ms: ApiComment["mentions"]): UiMention[] {
   return (ms ?? []).map((m) => ({
     userId: m.userId,
     name: m.name,
@@ -85,12 +92,12 @@ function mapMentions(ms: ApiComment["mentions"]): Mention[] {
   }));
 }
 
-function mapReplyTo(rt: ApiComment["replyTo"]): ReplyTo {
+function mapReplyTo(rt: ApiComment["replyTo"]): UiReplyTo {
   return rt ? { userId: rt.userId, name: rt.name } : null;
 }
 
-function mapApiCommentToUiComment(c: ApiComment): CommentItem {
-  const replies = (c.replies ?? []).map(mapApiCommentToUiComment);
+function mapComment(c: ApiComment): UiCommentItem {
+  const replies = (c.replies ?? []).map(mapComment);
 
   const replyTo = mapReplyTo(c.replyTo);
 
@@ -105,12 +112,14 @@ function mapApiCommentToUiComment(c: ApiComment): CommentItem {
     mentions: mapMentions(c.mentions),
 
     createdAt: c.createdAt,
+
     counts: {
       comments: c.counts.replyCount,
       likes: c.counts.likeCount,
       dislikes: c.counts.dislikeCount,
       quotes: 0,
     },
+
     myState: {
       reaction: c.myState.reactionType,
       isbookmarked: false,
@@ -123,9 +132,9 @@ function mapApiCommentToUiComment(c: ApiComment): CommentItem {
 
 export function mapApiResultToUi(
   result: ApiFeedDetailResult,
-): FeedDetailResult {
+): UiFeedDetailResult {
   return {
-    feed: mapApiFeedToUiFeed(result.feed),
-    comments: (result.comments ?? []).map(mapApiCommentToUiComment),
+    feed: mapFeed(result.feed),
+    comments: (result.comments ?? []).map(mapComment),
   };
 }

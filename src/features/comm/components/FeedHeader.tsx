@@ -1,11 +1,12 @@
 import { useState } from "react";
 import FeedEtcSheet from "./FeedEtcSheet";
+import type { UiFeedUser } from "../../../api/domains/community/feedDetail";
+import dummyProfile from "../../../assets/all/dummyProfile.svg";
 
 type Props = {
   feedId: number;
+  user: UiFeedUser;
   isMine: boolean;
-
-  user: { profileImg: string; userName: string; userId: string };
   isFollowing: boolean;
   onToggleFollow: () => void;
   etcIcon: string;
@@ -26,7 +27,7 @@ export default function FeedHeader({
       <div className="flex flex-row justify-between items-center px-3 py-4">
         <div className="flex flex-row gap-[8px]">
           <img
-            src={user.profileImg}
+            src={user.profileImg ?? dummyProfile}
             alt="프로필"
             className="w-10 h-10 rounded-[40px] border border-[#F9F9F9]"
           />

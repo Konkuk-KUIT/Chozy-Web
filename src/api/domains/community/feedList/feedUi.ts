@@ -42,6 +42,7 @@ export type ReviewContent = ReviewContentBase & {
 
 export type FeedItemBase = {
   feedId: number;
+  isMine: boolean;
   user: FeedUser;
   counts: FeedCounts;
   myState: FeedMyState;
