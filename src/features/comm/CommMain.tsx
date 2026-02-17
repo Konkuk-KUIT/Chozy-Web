@@ -58,9 +58,7 @@ function CommMain() {
   };
   return (
     <div className="h-full flex flex-col">
-      <div
-        style={{ opacity: isModalOpen ? 0.5 : 1, transition: "opacity 0.2s" }}
-      >
+      <div>
         <Header />
         <TabBar value={tab} onChange={handleTabChange} />
         <FilterToggle
@@ -75,18 +73,15 @@ function CommMain() {
       <div
         ref={scrollRef}
         className="scroll-available flex-1 overflow-y-auto scrollbar-hide"
-        style={{ opacity: isModalOpen ? 0.5 : 1, transition: "opacity 0.2s" }}
       >
         <PostList tab={tab} contentType={contentType} />
       </div>
-      <div
-        style={{ opacity: isModalOpen ? 0.5 : 1, transition: "opacity 0.2s" }}
-      >
+      <div>
         <Nav scrollTargetSelector=".scroll-available" />
       </div>
       {isModalOpen && (
         <div
-          className="fixed inset-0 w-[390px] mx-auto z-40 bg-black/40"
+          className="fixed inset-0 w-[min(100vw,calc(100dvh*9/16))] h-[100dvh] mx-auto z-50 bg-black/50"
           onClick={() => setIsModalOpen(false)}
         />
       )}
