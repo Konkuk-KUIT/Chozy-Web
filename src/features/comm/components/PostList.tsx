@@ -15,15 +15,17 @@ import bookmarkOff from "../../../assets/community/bookmark-off.svg";
 import share from "../../../assets/community/repost.svg";
 import load from "../../../assets/community/loading.svg";
 
-import { communityApi } from "../../../api";
+import { toUiFeedItem } from "../../../api/domains/mypage/mapper";
 
-type Tab = "RECOMMEND" | "FOLLOWING";
 type ContentType = "ALL" | "POST" | "REVIEW";
 type Reaction = "LIKE" | "DISLIKE" | "NONE";
+type EmptyVariant = "community" | "mypage";
 
-type PostProps = {
-  tab: Tab;
+type PostListProps = {
   contentType: ContentType;
+  fetchFeeds: () => Promise<{ code: number; result: { feeds: any[] } }>;
+  emptyVariant?: EmptyVariant;
+  emptyText?: string;
 };
 
 type ApiResponse<T> = {
@@ -106,146 +108,12 @@ function hasQuoteContent(
   return "quoteContent" in c && !!(c as any).quoteContent;
 }
 
-/**
- * ===== 서버 응답 최소 타입(필요한 것만) =====
- * 명세 JSON 형식 기준
- */
-type CursorResult<T> = {
-  feeds: T[];
-  hasNext: boolean;
-  nextCursor: string | null;
-};
-
-type ServerFeedItem = {
-  feedId: number;
-  kind: "ORIGINAL" | "QUOTE";
-  contentType: "POST" | "REVIEW";
-  isMine: boolean;
-  createdAt: string;
-
-  user: {
-    name: string;
-    userId: string;
-    profileImageUrl: string | null;
-  };
-
-  contents: {
-    text: string;
-    images: { imageUrl: string }[];
-
-    review?: {
-      vendor: string;
-      title: string;
-      rating: number;
-      productUrl: string | null;
-    } | null;
-
-    quote?: {
-      feedId: number;
-      user: {
-        name: string;
-        userId: string;
-        profileImageUrl: string | null;
-      };
-      text: string;
-      hashTags: string[];
-    } | null;
-  };
-
-  counts: {
-    viewCount: number;
-    commentCount: number;
-    likeCount: number;
-    dislikeCount: number;
-    quoteCount: number;
-  };
-
-  myState?: {
-    reactionType: Reaction;
-    isBookmarked: boolean;
-    isReposted: boolean;
-    isFollowing: boolean;
-  } | null;
-};
-
-const DEFAULT_MY_STATE: FeedMyState = {
-  reaction: "NONE",
-  isbookmarked: false,
-  isreposted: false,
-};
-
-function toUiItem(s: ServerFeedItem): FeedItem {
-  const contentImgs = (s.contents.images ?? [])
-    .map((img) => img.imageUrl)
-    .filter(Boolean);
-
-  const myState = s.myState ?? null;
-
-  const uiBase: FeedItemBase = {
-    feedId: s.feedId,
-    user: {
-      profileImg: s.user.profileImageUrl ?? "",
-      userName: s.user.name,
-      userId: s.user.userId,
-    },
-    counts: {
-      comments: s.counts.commentCount,
-      likes: s.counts.likeCount,
-      dislikes: s.counts.dislikeCount,
-      quotes: s.counts.quoteCount,
-    },
-    myState: myState
-      ? {
-          reaction: myState.reactionType,
-          isbookmarked: myState.isBookmarked,
-          isreposted: myState.isReposted,
-        }
-      : DEFAULT_MY_STATE,
-  };
-
-  if (s.contentType === "POST") {
-    return {
-      ...uiBase,
-      type: "POST",
-      content: {
-        text: s.contents.text,
-        contentImgs,
-      },
-    };
-  }
-
-  // REVIEW
-  return {
-    ...uiBase,
-    type: "REVIEW",
-    content: {
-      vendor: s.contents.review?.vendor ?? "",
-      title: s.contents.review?.title ?? "",
-      rating: s.contents.review?.rating ?? 0,
-      text: s.contents.text,
-      contentImgs,
-
-      ...(s.kind === "QUOTE" && s.contents.quote
-        ? {
-            quoteContent: {
-              vendor: s.contents.review?.vendor ?? "",
-              title: s.contents.review?.title ?? "",
-              rating: s.contents.review?.rating ?? 0,
-              text: s.contents.quote.text ?? "",
-              contentImgs: [],
-              user: {
-                profileImg: s.contents.quote.user.profileImageUrl ?? "",
-                userName: s.contents.quote.user.name,
-                userId: s.contents.quote.user.userId,
-              },
-            },
-          }
-        : {}),
-    },
-  };
-}
-
-export default function PostList({ tab, contentType }: PostProps) {
+export default function PostList({
+  contentType,
+  fetchFeeds,
+  emptyVariant,
+  emptyText,
+}: PostListProps) {
   const navigate = useNavigate();
 
   const [items, setItems] = useState<FeedItem[]>([]);
@@ -297,18 +165,15 @@ export default function PostList({ tab, contentType }: PostProps) {
       try {
         setLoading(true);
 
-        const data = await communityApi.feedsApi.getFeeds({
-          tab,
-          contentType,
-        });
+        const data = await fetchFeeds();
 
         if (data.code !== 1000) {
           setItems([]);
           return;
         }
 
-        const result = data.result as CursorResult<ServerFeedItem>;
-        const nextItems = (result.feeds ?? []).map(toUiItem);
+        const result = data.result;
+        const nextItems = (result.feeds ?? []).map(toUiFeedItem);
         setItems(nextItems);
       } catch (e) {
         console.error(e);
@@ -319,7 +184,7 @@ export default function PostList({ tab, contentType }: PostProps) {
     };
 
     run();
-  }, [tab, contentType]);
+  }, [fetchFeeds]);
 
   // 게시글 좋아요/싫어요 토글
   const handleToggleReaction = async (feedId: number, like: boolean) => {
@@ -423,12 +288,17 @@ export default function PostList({ tab, contentType }: PostProps) {
 
   if (!loading && filteredItems.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-45">
-        <img src={load} alt="로딩중" />
-        <p className="mt-6 text-[#787878] text-[16px] font-medium text-center leading-normal whitespace-pre-line">
-          {tab === "FOLLOWING"
-            ? "팔로우 중인 친구가 없어요.\n마음에 드는 이웃을 찾아보세요:)"
-            : "아직 게시글이 없어요.\n첫 글을 작성해보세요:)"}
+      <div className="flex flex-col items-center justify-center py-40">
+        {emptyVariant === "community" && <img src={load} alt="empty" />}
+
+        <p
+          className={
+            emptyVariant === "community"
+              ? "mt-6 text-[#787878] text-[16px] font-medium text-center leading-normal whitespace-pre-line"
+              : "mt-10 text-[#B5B5B5] text-[16px] font-medium text-center leading-normal whitespace-pre-line"
+          }
+        >
+          {emptyText ?? "목록이 없어요."}
         </p>
       </div>
     );

@@ -6,6 +6,8 @@ import TabBar from "./components/TabBar";
 import bgLogo from "../../assets/mypage/bgLogo.svg";
 import defaultProfile from "../../assets/mypage/defaultProfile.svg";
 
+import PostList from "../comm/components/PostList";
+
 import { mypageApi } from "../../api";
 
 type Tab = "reviews" | "bookmarks";
@@ -155,6 +157,25 @@ function MyMain() {
           </div>
         </div>
         <TabBar value={tab} onChange={handleTabChange} />
+      </div>
+      <div
+        ref={scrollRef}
+        className="bg-[#F9F9F9] scroll-available flex-1 overflow-y-auto scrollbar-hide"
+      >
+        <PostList
+          contentType="ALL"
+          fetchFeeds={() =>
+            tab === "reviews"
+              ? mypageApi.getMyFeeds({ page: 0, size: 20, sort: "latest" })
+              : mypageApi.getMyBookmarks({ page: 0, size: 20 })
+          }
+          emptyVariant="mypage"
+          emptyText={
+            tab === "reviews"
+              ? "아직 남긴 후기가 없어요.\n첫 후기를 남겨보세요!"
+              : "아직 북마크한 글이 없어요.\n나중에 다시 보고 싶은 글을 저장해보세요."
+          }
+        />
       </div>
       <Nav scrollTargetSelector=".scroll-available" />
     </>

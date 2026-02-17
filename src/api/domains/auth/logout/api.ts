@@ -1,4 +1,4 @@
-import { apiClient } from "../../../client/axios";
+import axiosInstance from "../../../axiosInstance";
 import type { ApiResponse } from "../../../client/types";
 
 export type LogoutResult = {
@@ -7,7 +7,7 @@ export type LogoutResult = {
 };
 
 export async function logout() {
-  const res = await apiClient.post<ApiResponse<LogoutResult>>(
+  const res = await axiosInstance.post<ApiResponse<LogoutResult>>(
     "/auth/logout",
     null,
     { withCredentials: true },
