@@ -9,6 +9,8 @@ const DEFAULT_MY_STATE = {
 };
 
 export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
+  const quote = s.contents.quote ? s.contents.quote : undefined;
+
   const contentImgs = (s.contents.images ?? [])
     .map((img) => img.imageUrl)
     .filter(Boolean);
@@ -25,6 +27,7 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
   // UI 공통 베이스
   const uiBase = {
     feedId: s.feedId,
+    kind: s.kind,
     isMine: s.mine ?? false,
     user: {
       profileImg: s.user.profileImageUrl ?? dummyProfile,
@@ -40,6 +43,20 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
     myState: uiMyState,
   } as const;
 
+  // 인용
+  const uiQuote = s.contents.quote
+    ? {
+        feedId: s.contents.quote.feedId,
+        user: {
+          profileImg: s.contents.quote.user.profileImageUrl ?? dummyProfile,
+          userName: s.contents.quote.user.name,
+          userId: s.contents.quote.user.userId,
+        },
+        text: s.contents.quote.text ?? "",
+        hashTags: s.contents.quote.hashTags ?? [],
+      }
+    : undefined;
+
   // POST
   if (s.contentType === "POST") {
     return {
@@ -48,14 +65,13 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
       content: {
         text: s.contents.text ?? "",
         contentImgs,
+        quote: uiQuote,
       },
     };
   }
 
   // REVIEW
   const review = s.contents.review ?? null;
-
-  const quote = s.kind === "QUOTE" ? s.contents.quote : null;
 
   return {
     ...uiBase,
@@ -64,8 +80,10 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
       vendor: review?.vendor ?? "",
       title: review?.title ?? "",
       rating: review?.rating ?? 0,
+      productUrl: review?.productUrl ?? null,
       text: s.contents.text ?? "",
       contentImgs,
+      quote,
 
       ...(quote
         ? {
@@ -73,6 +91,7 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
               vendor: review?.vendor ?? "",
               title: review?.title ?? "",
               rating: review?.rating ?? 0,
+              productUrl: review?.productUrl ?? null,
               text: quote.text ?? "",
               contentImgs: [],
               user: {

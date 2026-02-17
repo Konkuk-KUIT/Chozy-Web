@@ -1,3 +1,5 @@
+import type { FeedQuote } from "./types";
+
 export type Reaction = "LIKE" | "DISLIKE" | "NONE";
 
 export type FeedUser = {
@@ -22,6 +24,7 @@ export type FeedMyState = {
 export type PostContent = {
   text: string;
   contentImgs: string[];
+  quote?: UiQuote;
 };
 
 export type ReviewContentBase = {
@@ -30,6 +33,22 @@ export type ReviewContentBase = {
   rating: number;
   text: string;
   contentImgs: string[];
+  productUrl?: string | null;
+  quote?: UiQuote;
+};
+
+export type UiQuoteUser = {
+  profileImg: string;
+  userName: string;
+  userId: string;
+};
+
+export type UiQuote = {
+  feedId: number;
+  user: UiQuoteUser;
+  text: string;
+  hashTags: string[];
+  contentImgs?: string[];
 };
 
 export type QuotedReviewContent = ReviewContentBase & {
@@ -42,6 +61,7 @@ export type ReviewContent = ReviewContentBase & {
 
 export type FeedItemBase = {
   feedId: number;
+  kind: "ORIGINAL" | "QUOTE" | "REPOST";
   isMine: boolean;
   user: FeedUser;
   counts: FeedCounts;
