@@ -1,5 +1,6 @@
 import type { FeedItem as ServerFeedItem } from "../community/feedList";
 import type { FeedItem as UiFeedItem } from "../community/feedList/feedUi"; // PostList UI 타입(아래 설명 참고)
+import dummyProfile from "../../../assets/all/dummyProfile.svg";
 
 const DEFAULT_MY_STATE = {
   reaction: "NONE" as const,
@@ -16,16 +17,17 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
   const uiMyState = s.myState
     ? {
         reaction: s.myState.reactionType,
-        isbookmarked: s.myState.isBookmarked,
-        isreposted: s.myState.isReposted,
+        isbookmarked: s.myState.bookmarked,
+        isreposted: s.myState.reposted,
       }
     : DEFAULT_MY_STATE;
 
   // UI 공통 베이스
   const uiBase = {
     feedId: s.feedId,
+    isMine: s.mine ?? false,
     user: {
-      profileImg: s.user.profileImageUrl ?? "",
+      profileImg: s.user.profileImageUrl ?? dummyProfile,
       userName: s.user.name,
       userId: s.user.userId,
     },

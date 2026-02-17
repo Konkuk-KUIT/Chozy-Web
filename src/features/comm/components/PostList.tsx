@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import StarRating from "./StarRating";
 import ShareBottomSheet from "./ShareBottomSheet";
+import FeedEtcSheet from "./FeedEtcSheet";
 
 import comment from "../../../assets/community/comment.svg";
 import quotation from "../../../assets/community/quotation.svg";
@@ -14,11 +15,21 @@ import bookmarkOn from "../../../assets/community/bookmark-on.svg";
 import bookmarkOff from "../../../assets/community/bookmark-off.svg";
 import share from "../../../assets/community/repost.svg";
 import load from "../../../assets/community/loading.svg";
+import etc from "../../../assets/community/etc.svg";
+import dummyProfile from "../../../assets/all/dummyProfile.svg";
 
 import { toUiFeedItem } from "../../../api/domains/mypage/mapper";
+import type {
+  FeedItem,
+  QuotedReviewContent,
+  ReviewContent,
+} from "../../../api/domains/community/feedList/feedUi";
+import {
+  toggleFeedReaction,
+  toggleFeedBookmark,
+} from "../../../api/domains/community/actions";
 
 type ContentType = "ALL" | "POST" | "REVIEW";
-type Reaction = "LIKE" | "DISLIKE" | "NONE";
 type EmptyVariant = "community" | "mypage";
 
 type PostListProps = {
@@ -28,79 +39,10 @@ type PostListProps = {
   emptyText?: string;
 };
 
-type ApiResponse<T> = {
-  isSuccess: boolean;
-  code: number;
-  message: string;
-  timestamp: string;
-  result: T;
-};
-
-/**
- * ===== UI(기존 컴포넌트가 기대하는) 타입들 =====
- * - 서버 응답을 그대로 쓰지 않고, 아래 UI 타입으로 매핑해서 기존 렌더 코드를 최대한 유지함
- */
-type FeedUser = {
-  profileImg: string;
-  userName: string;
-  userId: string;
-};
-
-type FeedCounts = {
-  comments: number;
-  likes: number;
-  dislikes: number;
-  quotes: number;
-};
-
-type FeedMyState = {
-  reaction: Reaction;
-  isbookmarked: boolean;
-  isreposted: boolean;
-};
-
 type PostContent = {
   text: string;
   contentImgs: string[];
 };
-
-type ReviewContentBase = {
-  vendor: string;
-  title: string;
-  rating: number;
-  text: string;
-  contentImgs: string[];
-};
-
-type QuotedReviewContent = ReviewContentBase & {
-  user: FeedUser;
-};
-
-type ReviewContent = ReviewContentBase & {
-  quoteContent?: QuotedReviewContent;
-};
-
-type FeedItemBase = {
-  feedId: number;
-  user: FeedUser;
-  counts: FeedCounts;
-  myState: FeedMyState;
-};
-
-type LikeToggleResult = {
-  feedId: number;
-  reaction: Reaction;
-  counts: { likes: number; dislikes: number };
-};
-
-type BookmarkToggleResult = {
-  feedId: number;
-  isBookmarked: boolean;
-};
-
-export type FeedItem =
-  | (FeedItemBase & { type: "POST"; content: PostContent })
-  | (FeedItemBase & { type: "REVIEW"; content: ReviewContent });
 
 function hasQuoteContent(
   c: PostContent | ReviewContent,
@@ -119,15 +61,16 @@ export default function PostList({
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const [openEtc, setOpenEtc] = useState(false);
+  const [etcTarget, setEtcTarget] = useState<{
+    feedId: number;
+    isMine: boolean;
+    authorUserId: string;
+  } | null>(null);
+
   // 공유
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
-
-  // const hasToken = useMemo(
-  //   () => !!localStorage.getItem("accessToken"),
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  //   [],
-  // );
 
   const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
@@ -160,74 +103,46 @@ export default function PostList({
     setShareOpen(true);
   };
 
-  useEffect(() => {
-    const run = async () => {
-      try {
-        setLoading(true);
+  // 게시글 목록 조회
+  const loadFeeds = async () => {
+    try {
+      setLoading(true);
+      const data = await fetchFeeds();
 
-        const data = await fetchFeeds();
-
-        if (data.code !== 1000) {
-          setItems([]);
-          return;
-        }
-
-        const result = data.result;
-        const nextItems = (result.feeds ?? []).map(toUiFeedItem);
-        setItems(nextItems);
-      } catch (e) {
-        console.error(e);
+      if (data.code !== 1000) {
         setItems([]);
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
-    run();
+      const result = data.result;
+      const nextItems = (result.feeds ?? []).map(toUiFeedItem);
+
+      setItems(nextItems);
+    } catch (e) {
+      console.error(e);
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFeeds();
   }, [fetchFeeds]);
 
   // 게시글 좋아요/싫어요 토글
   const handleToggleReaction = async (feedId: number, like: boolean) => {
-    // 비로그인이라면 로그인 유도
     if (!localStorage.getItem("accessToken")) {
       navigate("/login");
       return;
     }
 
     try {
-      const res = await fetch(`/community/feeds/${feedId}/like`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ like }),
-      });
+      const data = await toggleFeedReaction(feedId, like);
 
-      if (res.status === 401) {
-        navigate("/login");
-        return;
-      }
-      if (!res.ok) throw new Error("toggle reaction failed");
-
-      const data: ApiResponse<LikeToggleResult> = await res.json();
       if (data.code !== 1000) throw new Error(data.message);
 
-      setItems((prev) =>
-        prev.map((it) =>
-          it.feedId !== feedId
-            ? it
-            : {
-                ...it,
-                counts: {
-                  ...it.counts,
-                  likes: data.result.counts.likes,
-                  dislikes: data.result.counts.dislikes,
-                },
-                myState: {
-                  ...it.myState,
-                  reaction: data.result.reaction,
-                },
-              },
-        ),
-      );
+      await loadFeeds();
     } catch (e) {
       console.error(e);
     }
@@ -235,7 +150,6 @@ export default function PostList({
 
   // 게시글 북마크 토글
   const handleToggleBookmark = async (feedId: number, current: boolean) => {
-    // 비로그인이라면 로그인 유도
     if (!localStorage.getItem("accessToken")) {
       navigate("/login");
       return;
@@ -244,34 +158,11 @@ export default function PostList({
     const nextValue = !current;
 
     try {
-      const res = await fetch(`/community/feeds/${feedId}/bookmark`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookmark: nextValue }),
-      });
+      const data = await toggleFeedBookmark(feedId, nextValue);
 
-      if (res.status === 401) {
-        navigate("/login");
-        return;
-      }
-      if (!res.ok) throw new Error("toggle bookmark failed");
-
-      const data: ApiResponse<BookmarkToggleResult> = await res.json();
       if (data.code !== 1000) throw new Error(data.message);
 
-      setItems((prev) =>
-        prev.map((it) =>
-          it.feedId !== feedId
-            ? it
-            : {
-                ...it,
-                myState: {
-                  ...it.myState,
-                  isbookmarked: data.result.isBookmarked,
-                },
-              },
-        ),
-      );
+      await loadFeeds();
     } catch (e) {
       console.error(e);
     }
@@ -315,20 +206,36 @@ export default function PostList({
             className="px-[8px] py-3 bg-white"
           >
             {/* 프로필 */}
-            <div className="flex flex-row gap-[8px] mb-[8px]">
-              <img
-                src={item.user.profileImg}
-                alt="프로필"
-                className="w-10 h-10 rounded-[40px] border border-[#F9F9F9]"
-              />
-              <div className="flex flex-col gap-[2px]">
-                <span className="text-[#191919] text-[14px] font-medium">
-                  {item.user.userName}
-                </span>
-                <span className="text-[#B5B5B5] text-[12px]">
-                  @{item.user.userId}
-                </span>
+            <div className="flex flex-row justify-between">
+              <div className="flex flex-row gap-[8px] mb-[8px]">
+                <img
+                  src={item.user.profileImg ?? dummyProfile}
+                  alt="프로필"
+                  className="w-10 h-10 rounded-[40px] border border-[#F9F9F9]"
+                />
+                <div className="flex flex-col gap-[2px]">
+                  <span className="text-[#191919] text-[14px] font-medium">
+                    {item.user.userName}
+                  </span>
+                  <span className="text-[#B5B5B5] text-[12px]">
+                    @{item.user.userId}
+                  </span>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEtcTarget({
+                    feedId: item.feedId,
+                    isMine: (item as any).isMine ?? false,
+                    authorUserId: item.user.userId,
+                  });
+                  setOpenEtc(true);
+                }}
+              >
+                <img src={etc} alt="더보기" />
+              </button>
             </div>
 
             {/* 리뷰일 때만 */}
@@ -372,7 +279,9 @@ export default function PostList({
               <div className="mt-5 rounded-[4px] border border-[#DADADA] px-[8px] py-3">
                 <div className="flex flex-row gap-[8px] mb-[8px]">
                   <img
-                    src={item.content.quoteContent.user.profileImg}
+                    src={
+                      item.content.quoteContent.user.profileImg ?? dummyProfile
+                    }
                     alt="인용 프로필"
                     className="w-8 h-8 rounded-full border border-[#F9F9F9]"
                   />
@@ -542,6 +451,17 @@ export default function PostList({
         open={shareOpen}
         onOpenChange={setShareOpen}
         shareUrl={shareUrl}
+      />
+
+      <FeedEtcSheet
+        open={openEtc}
+        onClose={() => {
+          setOpenEtc(false);
+          setEtcTarget(null);
+        }}
+        isMine={etcTarget?.isMine ?? false}
+        feedId={etcTarget?.feedId ?? 0}
+        authorUserId={etcTarget?.authorUserId ?? ""}
       />
     </>
   );

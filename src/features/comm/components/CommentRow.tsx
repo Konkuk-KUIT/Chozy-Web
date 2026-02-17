@@ -5,8 +5,12 @@ import goodOn from "../../../assets/community/good-on.svg";
 import goodOff from "../../../assets/community/good-off.svg";
 import badOn from "../../../assets/community/bad-on.svg";
 import badOff from "../../../assets/community/bad-off.svg";
+import dummyProfile from "../../../assets/all/dummyProfile.svg";
 
-import type { CommentItem, Mention } from "../types";
+import type {
+  UiCommentItem as CommentItem,
+  UiMention as Mention,
+} from "../../../api/domains/community/feedDetail";
 
 function formatCommentDate(iso: string) {
   const date = new Date(iso);
@@ -219,7 +223,7 @@ export default function CommentRow({
       <div className="flex justify-between">
         <img
           ref={lastAvatarRef ?? parentAvatarRef}
-          src={item.user.profileImg}
+          src={item.user.profileImg ?? dummyProfile}
           alt="프로필"
           className="w-10 h-10 rounded-full object-cover shrink-0"
         />

@@ -53,16 +53,16 @@ export type FeedCounts = {
 
 export type FeedMyState = {
   reactionType: ReactionType;
-  isBookmarked: boolean;
-  isReposted: boolean;
-  isFollowing: boolean;
+  bookmarked: boolean;
+  reposted: boolean;
+  following: boolean;
 };
 
 export type FeedItem = {
   feedId: number;
   kind: FeedKind;
   contentType: Exclude<FeedContentType, "ALL">; // 실제 응답은 POST/REVIEW
-  isMine: boolean;
+  mine: boolean;
   createdAt: string;
 
   user: FeedUser;

@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 
 import DetailHeader from "../../components/DetailHeader";
@@ -22,21 +22,30 @@ import bookmarkOn from "../../assets/community/bookmark-on.svg";
 import bookmarkOff from "../../assets/community/bookmark-off.svg";
 import share from "../../assets/community/repost.svg";
 import toastmsg from "../../assets/community/toastmsg.svg";
+import dummyProfile from "../../assets/all/dummyProfile.svg";
 
-import { mapApiResultToUi } from "./api/feedDetail.mapper";
-import type {
-  ApiFeedDetailResult,
-  ApiResponse,
-  BookmarkToggleResult,
-  CommentItem,
-  CommentLikeToggleResult,
-  FeedDetailResult,
-  FeedUser,
-  LikeToggleResult,
-  ReplyTarget,
-  Reaction,
-  ToastState,
-} from "./types";
+import {
+  getFeedDetail,
+  mapApiResultToUi,
+  pickIsMine,
+  type UiFeedDetailResult,
+  type UiCommentItem,
+  type Reaction,
+  type UiFeedUser,
+} from "../../api/domains/community/feedDetail";
+import {
+  toggleFeedReaction,
+  toggleFeedBookmark,
+  toggleCommentReaction,
+} from "../../api/domains/community/actions/api";
+
+type ToastState = { text: string; icon?: string } | null;
+
+type ReplyTarget = null | {
+  parentCommentId: number;
+  loginId: string;
+  showBar: boolean;
+};
 
 function formatKoreanDateTime(iso: string) {
   const d = new Date(iso);
@@ -52,77 +61,87 @@ function formatKoreanDateTime(iso: string) {
 }
 
 export default function PostDetail() {
+  const navigate = useNavigate();
   const { feedId } = useParams();
 
-  const [detail, setDetail] = useState<FeedDetailResult | null>(null);
+  const numericFeedId = Number(feedId);
+
+  const [detail, setDetail] = useState<UiFeedDetailResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [comments, setComments] = useState<CommentItem[]>([]);
+
+  const [comments, setComments] = useState<UiCommentItem[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [toast, setToast] = useState<ToastState>(null);
-  const [quoteSheetOpen, setQuoteSheetOpen] = useState(false);
-
-  const bottomRef = useRef<HTMLDivElement | null>(null);
-  const shouldScrollRef = useRef(false);
-
-  const [replyTarget, setReplyTarget] = useState<ReplyTarget>(null);
-  const commentInputRef = useRef<HTMLInputElement | null>(null);
   const [isMine, setIsMine] = useState(false);
 
-  // 작성일/조회수 (명세 기반)
-  const [createdAt, setCreatedAt] = useState<string>("");
-  const [viewCount, setViewCount] = useState<number>(0);
+  const [toast, setToast] = useState<ToastState>(null);
+
+  // 작성일/조회수
+  const [createdAtText, setCreatedAtText] = useState("");
+  const [viewCount, setViewCount] = useState(0);
+
+  // 인용 바텀시트
+  const [quoteSheetOpen, setQuoteSheetOpen] = useState(false);
+
+  // 댓글 입력
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget>(null);
+  const commentInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 새 댓글 추가 시 아래로 스크롤
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const shouldScrollRef = useRef(false);
 
   const showToast = (text: string, icon?: string) => {
     setToast({ text, icon });
     window.setTimeout(() => setToast(null), 2000);
   };
 
-  useEffect(() => {
-    if (!feedId) return;
+  const focusInput = () =>
+    requestAnimationFrame(() => commentInputRef.current?.focus());
 
-    const run = async () => {
-      try {
-        setLoading(true);
+  // ------------------------------
+  //  상세 조회
+  // ------------------------------
+  const fetchDetail = async () => {
+    if (!feedId || Number.isNaN(numericFeedId)) return;
 
-        const res = await fetch(`/community/feeds/${feedId}/detail`);
-        const data: ApiResponse<ApiFeedDetailResult> = await res.json();
-        console.log("detail raw:", data);
-        console.log("result keys:", Object.keys(data?.result ?? {}));
+    setLoading(true);
+    try {
+      const data = await getFeedDetail(numericFeedId);
 
-        if (data.code === 1000) {
-          const ui = mapApiResultToUi(data.result);
-
-          setDetail(ui);
-          setComments(ui.comments ?? []);
-
-          setIsFollowing(data.result.feed.myState.isFollowing);
-          setCreatedAt(formatKoreanDateTime(data.result.feed.createdAt));
-          setViewCount(data.result.feed.counts.viewCount);
-          setIsMine(data.result.feed.isMine);
-        } else {
-          setDetail(null);
-          setComments([]);
-        }
-      } catch {
+      if (data.code !== 1000) {
         setDetail(null);
         setComments([]);
-      } finally {
-        setLoading(false);
+        return;
       }
-    };
 
-    run();
-  }, [feedId]);
+      const ui = mapApiResultToUi(data.result);
+      setDetail(ui);
+      setComments(ui.comments ?? []);
+
+      setIsFollowing(data.result.feed.myState?.following ?? false);
+      setCreatedAtText(formatKoreanDateTime(data.result.feed.createdAt));
+      setViewCount(data.result.feed.counts?.viewCount ?? 0);
+      setIsMine(pickIsMine(data.result.feed));
+    } catch (e) {
+      console.error(e);
+      setDetail(null);
+      setComments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDetail();
+  }, [feedId, numericFeedId]);
 
   useEffect(() => {
     if (!shouldScrollRef.current) return;
-
     shouldScrollRef.current = false;
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [comments]);
 
   const feed = detail?.feed;
-
   if (loading) {
     return (
       <>
@@ -145,14 +164,14 @@ export default function PostDetail() {
     );
   }
 
-  /** ---------------------------
-   * 댓글/대댓글 로컬 추가 유틸
-   * -------------------------- */
+  // ------------------------------
+  //  댓글/대댓글 로컬 추가 유틸
+  // ------------------------------
   const addChildReply = (
-    list: CommentItem[],
+    list: UiCommentItem[],
     parentId: number,
-    child: CommentItem,
-  ): CommentItem[] => {
+    child: UiCommentItem,
+  ): UiCommentItem[] => {
     return list.map((c) => {
       if (c.commentId === parentId) {
         const nextChildren = [...(c.comment ?? []), child];
@@ -170,13 +189,13 @@ export default function PostDetail() {
   };
 
   const handleAddComment = (text: string) => {
-    const me: FeedUser = {
+    const me: UiFeedUser = {
       profileImg: feed.user.profileImg,
       userName: feed.user.userName,
       userId: feed.user.userId,
     };
 
-    const newItem: CommentItem = {
+    const newItem: UiCommentItem = {
       commentId: Date.now(),
       user: me,
       quote: replyTarget?.loginId ?? "",
@@ -205,17 +224,14 @@ export default function PostDetail() {
     ? `@${replyTarget.loginId}님에게 답글 남기기`
     : "게시글에 댓글 남기기";
 
-  const focusInput = () =>
-    requestAnimationFrame(() => commentInputRef.current?.focus());
-
   const handleClickPostComment = () => {
     setReplyTarget(null);
     focusInput();
   };
 
-  /** ---------------------------
-   * 팔로우 토글
-   * -------------------------- */
+  // ------------------------------
+  //  팔로우 토글
+  // ------------------------------
   type FollowStatus = "FOLLOWING" | "NONE";
   type FollowResponse = { targetUserId: string; followStatus: FollowStatus };
 
@@ -242,56 +258,41 @@ export default function PostDetail() {
           : "팔로우를 취소했어요.",
         nextIsFollowing ? toastmsg : undefined,
       );
-    } catch {
+    } catch (e) {
+      console.error(e);
       showToast("처리 중 오류가 발생했어요.");
     }
   };
 
-  /** ---------------------------
-   * 게시글 좋아요/싫어요
-   * -------------------------- */
+  // ------------------------------
+  //  게시글 좋아요/싫어요
+  // ------------------------------
   const handleToggleReaction = async (like: boolean) => {
-    if (!feedId || !detail) return;
+    if (!localStorage.getItem("accessToken")) {
+      navigate("/login");
+      return;
+    }
 
     try {
-      const res = await fetch(`/community/feeds/${feedId}/like`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ like }),
-      });
-      if (!res.ok) throw new Error("toggle reaction failed");
+      const data = await toggleFeedReaction(numericFeedId, like);
 
-      const data: ApiResponse<LikeToggleResult> = await res.json();
       if (data.code !== 1000) throw new Error(data.message);
 
-      setDetail((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          feed: {
-            ...prev.feed,
-            counts: {
-              ...prev.feed.counts,
-              likes: data.result.counts.likes,
-              dislikes: data.result.counts.dislikes,
-            },
-            myState: { ...prev.feed.myState, reaction: data.result.reaction },
-          },
-        };
-      });
-    } catch {
+      await fetchDetail();
+    } catch (e) {
+      console.error(e);
       showToast("처리 중 오류가 발생했어요.");
     }
   };
 
-  /** ---------------------------
-   * 댓글 좋아요/싫어요
-   * -------------------------- */
+  // ------------------------------
+  //  댓글 좋아요/싫어요
+  // ------------------------------
   const updateCommentReaction = (
-    list: CommentItem[],
+    list: UiCommentItem[],
     commentId: number,
     patch: { reaction: Reaction; likes: number; dislikes: number },
-  ): CommentItem[] => {
+  ): UiCommentItem[] => {
     return list.map((c) => {
       if (c.commentId === commentId) {
         return {
@@ -314,89 +315,71 @@ export default function PostDetail() {
     commentId: number,
     like: boolean,
   ) => {
-    try {
-      const res = await fetch(`/community/comments/${commentId}/like`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ like }),
-      });
-      if (!res.ok) throw new Error("toggle comment reaction failed");
+    if (!localStorage.getItem("accessToken")) {
+      navigate("/login");
+      return;
+    }
 
-      const data: ApiResponse<CommentLikeToggleResult> = await res.json();
+    try {
+      const data = await toggleCommentReaction(commentId, like);
+
       if (data.code !== 1000) throw new Error(data.message);
 
-      setComments((prev) =>
-        updateCommentReaction(prev, commentId, {
-          reaction: data.result.reaction,
-          likes: data.result.counts.likes,
-          dislikes: data.result.counts.dislikes,
-        }),
-      );
-    } catch {
+      await fetchDetail();
+    } catch (e) {
+      console.error(e);
       showToast("처리 중 오류가 발생했어요.");
     }
   };
 
-  /** ---------------------------
-   * 북마크 토글
-   * -------------------------- */
+  // ------------------------------
+  //  북마크 토글
+  // ------------------------------
   const handleToggleBookmark = async () => {
-    if (!feedId || !detail) return;
+    if (!localStorage.getItem("accessToken")) {
+      navigate("/login");
+      return;
+    }
+
+    if (!detail) return;
 
     const current = detail.feed.myState.isbookmarked;
     const nextValue = !current;
 
     try {
-      const res = await fetch(`/community/feeds/${feedId}/bookmark`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookmark: nextValue }),
-      });
-      if (!res.ok) throw new Error("toggle bookmark failed");
-
-      const data: ApiResponse<BookmarkToggleResult> = await res.json();
+      const data = await toggleFeedBookmark(numericFeedId, nextValue);
       if (data.code !== 1000) throw new Error(data.message);
 
-      setDetail((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          feed: {
-            ...prev.feed,
-            myState: {
-              ...prev.feed.myState,
-              isbookmarked: data.result.isBookmarked,
-            },
-          },
-        };
-      });
-    } catch {
+      const after = await getFeedDetail(numericFeedId);
+      console.log("after detail raw myState:", after.result.feed.myState);
+
+      await fetchDetail();
+    } catch (e) {
+      console.error(e);
       showToast("처리 중 오류가 발생했어요.");
     }
   };
 
-  /** ---------------------------
-   * 리포스트
-   * -------------------------- */
-  const isReposted = detail?.feed.myState.isreposted ?? false;
+  // ------------------------------
+  //  리포스트
+  // ------------------------------
+  const isReposted = detail.feed.myState.isreposted;
 
   const handleToggleRepost = async () => {
     if (!detail) return;
 
-    const feedId = detail.feed.feedId;
-    const isReposted = detail.feed.myState.isreposted;
+    const originFeedId = detail.feed.feedId;
     const contentType = detail.feed.type === "REVIEW" ? "REVIEW" : "POST";
 
     try {
       if (!isReposted) {
-        // 리포스트
         const res = await fetch("/community/repost", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             kind: "REPOST",
             content_type: contentType,
-            originalFeedId: feedId,
+            originalFeedId: originFeedId,
           }),
         });
         if (!res.ok) throw new Error("repost failed");
@@ -417,8 +400,7 @@ export default function PostDetail() {
         return;
       }
 
-      // 리포스트 취소
-      const res = await fetch(`/community/repost/${feedId}`, {
+      const res = await fetch(`/community/repost/${originFeedId}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("repost cancel failed");
@@ -436,19 +418,23 @@ export default function PostDetail() {
             }
           : prev,
       );
-    } catch {
+    } catch (e) {
+      console.error(e);
       showToast("처리 중 오류가 발생했어요.");
     }
   };
 
+  // ------------------------------
+  //  렌더
+  // ------------------------------
   return (
     <div className="relative h-screen flex flex-col">
       <DetailHeader title="게시글" />
 
-      <div className="flex-1 min-h-0 scroll-available overflow-y-auto scrollbar-hide pb-15">
+      <div className="flex-1 flex flex-col bg-[#F9F9F9] min-h-0 scroll-available overflow-y-auto scrollbar-hide pb-15">
         <div className="bg-white">
           <FeedHeader
-            feedId={Number(feedId)}
+            feedId={numericFeedId}
             isMine={isMine}
             user={feed.user}
             isFollowing={isFollowing}
@@ -461,7 +447,7 @@ export default function PostDetail() {
           <FeedActions
             counts={feed.counts}
             myState={feed.myState}
-            createdAtText={createdAt}
+            createdAtText={createdAtText}
             viewCount={viewCount}
             commentIcon={comment}
             quotationIcon={quotation}
@@ -485,8 +471,8 @@ export default function PostDetail() {
         <div
           className={
             comments.length === 0
-              ? "px-3 py-1 min-h-[200px] flex items-center justify-center bg-[#f9f9f9]"
-              : "px-3 py-1 min-h-[200px] bg-[#f9f9f9]"
+              ? "flex-1 px-3 py-1 flex items-center justify-center bg-[#f9f9f9]"
+              : "px-3 py-1 bg-[#f9f9f9]"
           }
         >
           {comments.length === 0 ? (
@@ -514,19 +500,22 @@ export default function PostDetail() {
         </div>
       </div>
 
+      {/* Toast */}
       {toast && (
-        <div className="absolute inset-x-0 bottom-[84px] z-50 px-4 mx-4">
-          <div className="h-12 rounded-[4px] bg-[#787878] px-4 flex items-center gap-[10px]">
-            {toast.icon && (
-              <img src={toast.icon} alt="" className="w-5 h-5 shrink-0" />
-            )}
-            <span className="text-[16px] text-white">{toast.text}</span>
+        <div className="absolute inset-x-0 bottom-[84px] z-50 px-4">
+          <div className="mx-auto w-full">
+            <div className="h-12 rounded-[4px] bg-[#787878] px-4 flex items-center gap-[10px]">
+              {toast.icon && (
+                <img src={toast.icon} alt="" className="w-5 h-5 shrink-0" />
+              )}
+              <span className="text-[16px] text-white">{toast.text}</span>
+            </div>
           </div>
         </div>
       )}
 
       <CommentInput
-        profileImg={feed.user.profileImg}
+        profileImg={feed.user.profileImg ?? dummyProfile}
         onSubmit={handleAddComment}
         replyTo={replyTarget?.showBar ? replyTarget.loginId : null}
         onClearReply={() => setReplyTarget(null)}
@@ -541,8 +530,7 @@ export default function PostDetail() {
         onRepost={handleToggleRepost}
         onQuote={() => {
           // TODO: 인용 작성 화면으로 이동
-          // navigate(`/community/feeds/${feed.feedId}/quote`);
-          showToast("인용 작성으로 이동!");
+          // navigate(`/community/feeds/${numericFeedId}/quote`);
         }}
       />
     </div>
