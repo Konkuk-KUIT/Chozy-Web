@@ -16,7 +16,7 @@ export default function TabBar({ value, onChange }: TabBarProps) {
           className={`h-[42px] text-[16px] border-b-1 p-[10px]
             ${
               value === "RECOMMEND"
-                ? "text-[#66021F] font-semibold border-[#66021F]"
+                ? "text-[#800025] font-semibold border-[#800025]"
                 : "text-[#B5B5B5] border-transparent"
             }`}
         >
@@ -28,7 +28,7 @@ export default function TabBar({ value, onChange }: TabBarProps) {
           className={`h-[42px] text-[16px] border-b-1 p-[10px]
             ${
               value === "FOLLOWING"
-                ? "text-[#66021F] font-semibold border-[#66021F]"
+                ? "text-[#66021F] font-semibold border-[#800025]"
                 : "text-[#B5B5B5] border-transparent"
             }`}
         >

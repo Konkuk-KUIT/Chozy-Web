@@ -7,6 +7,8 @@ import PostList from "./components/PostList";
 import WriteBtn from "./components/WriteBtn";
 import FloatingMenu from "./components/FloatingMenu";
 
+import { communityApi } from "../../api";
+
 const OPTIONS: ToggleOption[] = [
   { key: "ALL", label: "전체" },
   { key: "POST", label: "사담" },
@@ -56,11 +58,10 @@ function CommMain() {
     }
     setTab(next);
   };
+
   return (
     <div className="h-full flex flex-col">
-      <div
-        style={{ opacity: isModalOpen ? 0.5 : 1, transition: "opacity 0.2s" }}
-      >
+      <div>
         <Header />
         <TabBar value={tab} onChange={handleTabChange} />
         <FilterToggle
@@ -75,18 +76,26 @@ function CommMain() {
       <div
         ref={scrollRef}
         className="scroll-available flex-1 overflow-y-auto scrollbar-hide"
-        style={{ opacity: isModalOpen ? 0.5 : 1, transition: "opacity 0.2s" }}
       >
-        <PostList tab={tab} contentType={contentType} />
+        <PostList
+          contentType={contentType}
+          fetchFeeds={() =>
+            communityApi.feedsApi.getFeeds({ tab, contentType })
+          }
+          emptyVariant="community"
+          emptyText={
+            tab === "FOLLOWING"
+              ? "팔로우 중인 친구가 없어요.\n마음에 드는 이웃을 찾아보세요:)"
+              : "아직 게시글이 없어요.\n첫 글을 작성해보세요:)"
+          }
+        />
       </div>
-      <div
-        style={{ opacity: isModalOpen ? 0.5 : 1, transition: "opacity 0.2s" }}
-      >
+      <div>
         <Nav scrollTargetSelector=".scroll-available" />
       </div>
       {isModalOpen && (
         <div
-          className="fixed inset-0 w-[390px] mx-auto z-40 bg-black/40"
+          className="fixed inset-0 w-[min(100vw,calc(100dvh*9/16))] h-[100dvh] mx-auto z-50 bg-black/50"
           onClick={() => setIsModalOpen(false)}
         />
       )}

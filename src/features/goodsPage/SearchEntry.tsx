@@ -10,6 +10,11 @@ import popularDown from "../../assets/goodsPage/search/popular_down.svg";
 import popularStay from "../../assets/goodsPage/search/popular_stay.svg";
 import clueIcon from "../../assets/goodsPage/search/clue.svg";
 
+import {
+  deleteAllRecentKeywords,
+  deleteRecentKeyword,
+} from "../../api/domains/goods/search";
+
 type ApiResponse<T> = {
   isSuccess: boolean;
   code: number;
@@ -83,10 +88,7 @@ function renderHighlighted(text: string, keyword: string) {
       nodes.push(<span key={`pre-${i}`}>{text.slice(cursor, r.s)}</span>);
     }
     nodes.push(
-      <span
-        key={`hit-${i}`}
-        className="text-[#800020] font-semibold"
-      >
+      <span key={`hit-${i}`} className="text-[#800020] font-semibold">
         {text.slice(r.s, r.e)}
       </span>,
     );
@@ -99,7 +101,6 @@ function renderHighlighted(text: string, keyword: string) {
 
   return nodes;
 }
-
 
 export default function SearchEntry() {
   const navigate = useNavigate();
@@ -114,14 +115,14 @@ export default function SearchEntry() {
   const hasPopularKeywords = popularKeywords.length > 0;
   const hasRecentProducts = recentProducts.length > 0;
 
-  const [isComposing, setIsComposing] = useState(false); //한글 입력 조합 상태
-
   const [recommends, setRecommends] = useState<RecommendKeyword[]>([]);
 
   const trimmed = query.trim();
   const isBlankOnly = query.length > 0 && trimmed.length === 0;
 
-  const shouldShowAutocomplete = trimmed.length >= 1 && !isBlankOnly; // 자동완성 노출 조건 : 1글자 이상 + 공백만 입력 제외
+  // 자동완성 노출 조건: 1글자 이상 입력 + 공백만 입력 제외
+  // query.length으로 기존 스페이스 입력 -> 실시간 감지로 변경
+  const shouldShowAutocomplete = query.length >= 1 && !isBlankOnly;
 
   const popularSlots = useMemo(() => {
     if (hasPopularKeywords) return popularKeywords.slice(0, 8);
@@ -140,6 +141,47 @@ export default function SearchEntry() {
     const res = await fetch(url, { signal });
     const data = (await res.json()) as ApiResponse<T>;
     return (data.result ?? ([] as unknown as T)) as T;
+  };
+
+  // // 전체 삭제: DELETE /home/search/recent
+  // const deleteAllRecentKeywordsApi = async () => {
+  //   const res = await fetch("/home/search/recent", { method: "DELETE" });
+  //   const data = (await res.json()) as ApiResponse<string>;
+  //   if (!res.ok || !data.isSuccess) throw new Error(data.message);
+  //   return data;
+  // };
+
+  // // 개별 삭제: DELETE /home/searches/recent/{keywordId}
+  // const deleteOneRecentKeywordApi = async (keywordId: number) => {
+  //   const res = await fetch(`/home/searches/recent/${keywordId}`, {
+  //     method: "DELETE",
+  //   });
+  //   const data = (await res.json()) as ApiResponse<string>;
+  //   if (!res.ok || !data.isSuccess) throw new Error(data.message);
+  //   return data;
+  // };
+
+  const onDeleteRecentKeyword = async (keywordId: number) => {
+    const prev = recentKeywords;
+
+    setRecentKeywords((curr) => curr.filter((k) => k.keywordId !== keywordId));
+
+    try {
+      await deleteRecentKeyword(keywordId); // 👈 여기
+    } catch {
+      setRecentKeywords(prev);
+    }
+  };
+
+  const onClearRecentKeywords = async () => {
+    const prev = recentKeywords;
+    setRecentKeywords([]);
+
+    try {
+      await deleteAllRecentKeywords();
+    } catch {
+      setRecentKeywords(prev);
+    }
   };
 
   const loadSections = useCallback(async () => {
@@ -163,42 +205,44 @@ export default function SearchEntry() {
     return () => window.clearTimeout(id);
   }, [loadSections]);
 
-
   useEffect(() => {
     // 자동완성 숨김 조건
-    if (!shouldShowAutocomplete || isComposing) {
-      const id = window.setTimeout(() => {
-        setRecommends([]);
-      }, 0);
-      return () => window.clearTimeout(id);
+    if (!shouldShowAutocomplete) {
+      return;
     }
 
+    const ac = new AbortController();
+
+    // 디바운싱: 사용자 입력 중에는 API 호출 지연, 입력 완료 후 호출
     const timer = window.setTimeout(() => {
       void (async () => {
         try {
           const list = await fetchJson<RecommendKeyword[]>(
             `/home/search/recommend?keyword=${encodeURIComponent(trimmed)}`,
+            ac.signal,
           );
-          const id = window.setTimeout(() => {
+          if (!ac.signal.aborted) {
             setRecommends((list ?? []).slice(0, 10));
-          }, 0);
-          return () => window.clearTimeout(id);
+          }
         } catch {
-          const id = window.setTimeout(() => {
+          if (!ac.signal.aborted) {
             setRecommends([]);
-          }, 0);
-          return () => window.clearTimeout(id);
+          }
         }
       })();
     }, 200);
 
-    return () => window.clearTimeout(timer);
-  }, [shouldShowAutocomplete, isComposing, trimmed]);
-
+    return () => {
+      window.clearTimeout(timer);
+      ac.abort();
+      // 정리 시에만 상태 초기화
+      setRecommends([]);
+    };
+  }, [trimmed, shouldShowAutocomplete]);
 
   const saveSearchKeyword = async (keyword: string) => {
     // “검색 결과 화면으로 이동할 때” 1회 API 호출
-    // Enter / 최근검색어 클릭 / 인기검색어 클릭 / (향후 자동완성 선택)
+    // Enter / 최근검색어 클릭 / 인기검색어 클릭 / 자동완성 선택
     await fetch("/home/search", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -219,11 +263,6 @@ export default function SearchEntry() {
     goToResults(keyword);
   };
 
-  const onDeleteRecentKeyword = (keywordId: number) => {
-    // 백엔드 삭제 API 명세가 없으므로 이번 PR에서는 클라이언트 state에서만 삭제 반영 -> 삭제 API 요청
-    setRecentKeywords((prev) => prev.filter((k) => k.keywordId !== keywordId));
-  };
-
   const onToggleRecentProductLike = (productId: number) => {
     setRecentProducts((prev) =>
       prev.map((p) =>
@@ -233,17 +272,16 @@ export default function SearchEntry() {
   };
 
   return (
-    <div className="relative w-[390px] mx-auto bg-white min-h-screen">
+    <div className="relative h-full flex flex-col bg-white w-full overflow-x-hidden">
       <SearchBar2
         autoFocus
         backBehavior="BACK"
         value={query}
         onChange={setQuery}
         onSubmitQuery={(q) => runSearch(q)}
-        onCompositionChange={setIsComposing}
       />
 
-      <main className="pt-[72px]">
+      <main className="flex-1 overflow-y-auto scrollbar-hide pt-[72px]">
         <section className="bg-white">
           <div className={`h-1 ${SECTION_GAP_BG}`} />
           <div className="px-4 py-4">
@@ -251,6 +289,15 @@ export default function SearchEntry() {
               <h2 className="text-[16px] font-bold text-[#191919]">
                 최근 검색어
               </h2>
+              {hasRecentKeywords && (
+                <button
+                  type="button"
+                  onClick={onClearRecentKeywords}
+                  className="text-[12px] font-normal text-[#B5B5B5] underline"
+                >
+                  전체삭제
+                </button>
+              )}
             </div>
 
             <div className="mt-3">
@@ -297,7 +344,7 @@ export default function SearchEntry() {
               </h2>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-x-[24px] gap-y-3">
+            <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3">
               {popularSlots.map((k, idx) => {
                 const rank = idx + 1;
                 const icon = hasPopularKeywords
@@ -314,19 +361,23 @@ export default function SearchEntry() {
                     disabled={!clickable}
                     onClick={() => runSearch(k.keyword)}
                     className={`
-                      w-[165px] flex items-center justify-between bg-transparent px-0 py-0
+                      w-full min-w-0 flex items-center justify-between bg-transparent px-0 py-0
                       ${clickable ? "cursor-pointer" : "cursor-default"}
                     `}
                   >
                     <div className="flex items-center gap-1 min-w-0">
-                      <span className="text-[12px] font-bold text-[#66021F]">
+                      <span className="text-[12px] font-bold text-[#66021F] flex-shrink-0">
                         {rank}
                       </span>
-                      <span className="text-[12px] text-[#191919] truncate">
+                      <span className="text-[12px] text-[#191919] min-w-0 truncate">
                         {hasPopularKeywords ? k.keyword : ""}
                       </span>
                     </div>
-                    <img src={icon} alt="trend" className="w-4 h-4 shrink-0" />
+                    <img
+                      src={icon}
+                      alt="trend"
+                      className="w-4 h-4 flex-shrink-0"
+                    />
                   </button>
                 );
               })}
@@ -365,9 +416,6 @@ export default function SearchEntry() {
                         discountRate={p.discountRate}
                         imageUrl={p.imageUrl}
                         productUrl={p.productUrl}
-                        rating={p.rating}
-                        reviewCount={p.reviewCount}
-                        deliveryFee={p.deliveryFee}
                         status={p.status}
                         onToggleLike={onToggleRecentProductLike}
                       />
@@ -379,24 +427,32 @@ export default function SearchEntry() {
           </div>
         </section>
 
-        {/* 입력 중일때->자동완성 오버레이 : 현재는 스페이스바 눌러야 인식 가능, 이후 시간 여유 있으면 수정 */} 
-        {shouldShowAutocomplete && !isComposing && (
-          <div className="absolute inset-0 bg-white pt-[72px]">
-            {/* 0개면 빈 화면 */}
+        {/* 자동완성: 1글자 이상 입력 시 200ms 디바운싱 후 실시간 노출 */}
+        {shouldShowAutocomplete && (
+          <div
+            className="absolute inset-0 bg-white pt-[72px] z-40"
+            onMouseDown={(e) => e.preventDefault()}
+          >
             <div className="px-4 py-2">
-              {recommends.slice(0, 10).map((item) => (
-                <button
-                  key={item.keywordId}
-                  type="button"
-                  className="w-full h-[44px] flex items-center text-left gap-3"
-                  onClick={() => runSearch(item.keyword)}
-                >
-                  <img src={clueIcon} alt="" className="w-4 h-4 shrink-0" />
-                  <span className="text-[16px] text-[#191919]">
-                    {renderHighlighted(item.keyword, trimmed)}
-                  </span>
-                </button>
-              ))}
+              {recommends.length > 0 ? (
+                recommends.slice(0, 10).map((item) => (
+                  <button
+                    key={item.keywordId}
+                    type="button"
+                    className="w-full h-[44px] flex items-center text-left gap-3"
+                    onClick={() => runSearch(item.keyword)}
+                  >
+                    <img src={clueIcon} alt="" className="w-4 h-4 shrink-0" />
+                    <span className="text-[16px] text-[#191919]">
+                      {renderHighlighted(item.keyword, trimmed)}
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <div className="py-4 text-center text-[14px] text-[#B9B9B9]">
+                  추천 검색어가 없습니다.
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -1,11 +1,12 @@
 // 상품페이지의 메인페이지
 import { useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Header from "./components/Header";
 import Nav from "../../components/Nav";
 import Category from "./components/Category";
 import SearchBar from "../../components/SearchBar";
 import Product from "./components/Product";
+import ScrollToTop from "./components/ScrollToTop";
 
 import cloth from "../../assets/goodsPage/category/cloth.svg";
 import beauty from "../../assets/goodsPage/category/beauty.svg";
@@ -15,6 +16,9 @@ import cooking from "../../assets/goodsPage/category/cooking.svg";
 import pet from "../../assets/goodsPage/category/pet.svg";
 import electronics from "../../assets/goodsPage/category/electronics.svg";
 import car from "../../assets/goodsPage/category/car.svg";
+
+import { getPopularKeywords } from "../../api/domains/goodsPage/topKeyword/api";
+import { getRecommendProducts } from "../../api/domains/goodsPage";
 
 type ApiCategory =
   | "FASHION"
@@ -28,30 +32,13 @@ type ApiCategory =
 
 type ApiProduct = {
   productId: number;
+  vendor: string;
   name: string;
   originalPrice: number;
   discountRate: number;
   imageUrl: string;
   productUrl: string;
-  rating: number;
-  reviewCount: number;
-  deliveryFee: number;
   status: boolean;
-};
-
-type ApiKeyword = {
-  keywordId: number;
-  keyword: string;
-  previousRank?: number;
-  currentRank?: number;
-};
-
-type ApiResponse<T> = {
-  isSuccess: boolean;
-  code: number;
-  message: string;
-  timestamp: string;
-  result: T;
 };
 
 const categories: {
@@ -74,23 +61,63 @@ function Home() {
 
   const [popularKeywords, setPopularKeywords] = useState<string[]>([]);
   const [productList, setProductList] = useState<ApiProduct[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingProducts] = useState(false);
+
+  const [page, setPage] = useState(0);
+  const [hasNext, setHasNext] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   // 추천 상품 요청 URL (명세 기반)
-  const recommendUrl = useMemo(() => {
-    const params = new URLSearchParams();
-    params.set("sort", "RELEVANCE");
-    return `/home/products?${params.toString()}`;
-  }, []);
+  const loadRecommend = async (nextPage: number) => {
+    if (loading || !hasNext) return;
+
+    setLoading(true);
+    try {
+      const data = await getRecommendProducts({
+        page: nextPage,
+        size: 20,
+      });
+
+      const result = data.result.result;
+
+      const mappedItems: ApiProduct[] = (result.items ?? []).map((p: any) => ({
+        productId: p.productId,
+        vendor: p.vendor,
+        name: p.name,
+        originalPrice: p.originalPrice,
+        discountRate: p.discountRate,
+        imageUrl: p.imageUrl,
+        productUrl: p.productUrl,
+        status: !!p.isFavorited,
+      }));
+
+      setProductList((prev) => {
+        const next = [...prev, ...mappedItems];
+        const uniq = new Map<number, (typeof next)[number]>();
+        next.forEach((it) => uniq.set(it.productId, it));
+        return Array.from(uniq.values());
+      });
+
+      setHasNext(result.hasNext);
+      setPage(result.page);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // 인기 검색어 불러오기
+    loadRecommend(0);
+  }, []);
+
+  // 인기 검색어
+  useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("/home/search/popular");
-        const data: ApiResponse<ApiKeyword[]> = await res.json();
+        const data = await getPopularKeywords();
         setPopularKeywords(
-          (data.result ?? []).slice(0, 10).map((k) => k.keyword)
+          (data.result ?? []).slice(0, 10).map((k: any) => k.keyword),
         );
       } catch (e) {
         console.error("인기검색어 로딩 실패:", e);
@@ -99,29 +126,31 @@ function Home() {
     })();
   }, []);
 
+  const observerRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
-    // 추천 상품 불러오기
-    (async () => {
-      setLoadingProducts(true);
-      try {
-        const res = await fetch(recommendUrl);
-        const data: ApiResponse<ApiProduct[]> = await res.json();
-        setProductList(data.result ?? []);
-      } catch (e) {
-        console.error("추천 상품 로딩 실패:", e);
-        setProductList([]);
-      } finally {
-        setLoadingProducts(false);
-      }
-    })();
-  }, [recommendUrl]);
+    if (!observerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNext) {
+          loadRecommend(page + 1);
+        }
+      },
+      { threshold: 1 },
+    );
+
+    observer.observe(observerRef.current);
+
+    return () => observer.disconnect();
+  }, [page, hasNext]);
 
   // 하트 토글(서버 연동 전): status 토글
   const handleToggleLike = (productId: number) => {
     setProductList((prev) =>
       prev.map((item) =>
-        item.productId === productId ? { ...item, status: !item.status } : item
-      )
+        item.productId === productId ? { ...item, status: !item.status } : item,
+      ),
     );
   };
 
@@ -132,7 +161,7 @@ function Home() {
         <div className="scroll-available h-full overflow-y-auto overflow-x-hidden pt-[48px] scrollbar-hide">
           <main className="flex flex-col gap-3">
             {/* 검색창 && 인기검색어 */}
-            <div className="flex flex-col px-4 pt-2 pb-3 gap-3 shadow-[0_4px_10px_0_rgba(0,0,0,0.04)]">
+            <div className="flex flex-col px-4 pt-2 pb-3 gap-3 shadow-[0_4px_10px_0_rgba(0,0,0,0.04)] bg-[#F9F9F9]">
               <SearchBar />
 
               <div className="flex items-center gap-3">
@@ -146,7 +175,7 @@ function Home() {
                       key={keyword}
                       onClick={() => {
                         navigate(
-                          `/home/products?search=${encodeURIComponent(keyword)}`
+                          `/home/products?search=${encodeURIComponent(keyword)}`,
                         );
                       }}
                       className="flex-shrink-0 text-[#787878] text-[14px]"
@@ -191,29 +220,29 @@ function Home() {
               <div
                 className="grid gap-x-1 gap-y-4 
             [grid-template-columns:repeat(auto-fill,minmax(177px,1fr))]
-            justify-items-start"
+            justify-items-center"
               >
                 {productList.map((p) => (
                   <Product
                     key={p.productId}
                     productId={p.productId}
+                    vendor={p.vendor}
                     imageUrl={p.imageUrl}
                     productUrl={p.productUrl}
                     name={p.name}
                     originalPrice={p.originalPrice}
                     discountRate={p.discountRate}
-                    rating={p.rating}
-                    reviewCount={p.reviewCount}
-                    deliveryFee={p.deliveryFee}
                     status={p.status}
                     onToggleLike={handleToggleLike}
                   />
                 ))}
               </div>
+              <div ref={observerRef} />
             </div>
           </main>
         </div>
         <Nav scrollTargetSelector=".scroll-available" />
+        <ScrollToTop scrollTargetSelector=".scroll-available" />
       </div>
     </>
   );
