@@ -8,11 +8,6 @@ import {
 } from "../../api/domains/follow/request";
 import type { FollowRequestItem } from "../../api/domains/follow/request";
 
-async function acceptFollowRequest(requestId: number) {
-  console.log("accept requestId:", requestId);
-  return { code: 1000 };
-}
-
 export default function FollowRequestList() {
   console.log("FollowRequestList mounted");
   const [items, setItems] = useState<FollowRequestItem[]>([]);
