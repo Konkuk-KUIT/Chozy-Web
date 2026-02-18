@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import SuccessModal from "./components/SuccessModal";
+import DetailHeader from "../../components/DetailHeader";
+import SubmitButton from "../../components/SubmitButton";
+import Toast from "../../components/Toast";
+import SuccessModal from "../../components/SuccessModal";
 import HashtagInput from "./components/HashtagInput";
 import ImageUpload from "./components/ImageUpload";
-import SubmitButton from "./components/SubmitButton";
-
-import backIcon from "../../assets/all/back.svg";
 
 export default function PostWrite() {
   const navigate = useNavigate();
@@ -14,10 +14,22 @@ export default function PostWrite() {
   const [images, setImages] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleBack = () => {
-    navigate(-1);
+  const handleResizeHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
   };
+
+  useEffect(() => {
+    handleResizeHeight();
+  }, [content]);
 
   const isFormValid = (): boolean => {
     return content.trim().length > 0;
@@ -50,21 +62,27 @@ export default function PostWrite() {
       });
 
       const data = await response.json();
-      console.log("응답:", data);
 
       if (data.isSuccess) {
-        console.log("포스트 작성 성공:", data);
         setShowSuccess(true);
         // 2초 후 게시글 상세 페이지로 이동
         setTimeout(() => {
-          navigate(`/community/feeds/${data.result.postId}`);
+          navigate(`/community/feeds/${data.result.postId}/detail`);
         }, 2000);
       } else {
-        throw new Error(data.message || "포스트 작성에 실패했습니다.");
+        setToast({
+          message: data.message || "사담 게시에 실패했습니다.",
+          type: "error",
+        });
+        setTimeout(() => setToast(null), 3000);
       }
     } catch (error) {
-      console.error("포스트 작성 중 오류:", error);
-      alert("포스트 작성에 실패했습니다.");
+      console.error("사담 작성 중 오류:", error);
+      setToast({
+        message: "네트워크 오류가 발생했습니다. 다시 시도해주세요.",
+        type: "error",
+      });
+      setTimeout(() => setToast(null), 3000);
     } finally {
       setIsLoading(false);
     }
@@ -72,20 +90,7 @@ export default function PostWrite() {
 
   return (
     <div className="w-full min-h-screen bg-white pb-20">
-      {/* Header */}
-      <div className="sticky top-0 bg-white z-10">
-        <div className="h-12 flex items-center justify-center px-4 pt-[14px] pb-[13px] relative">
-          <button
-            onClick={handleBack}
-            className="w-6 h-6 flex items-center justify-center flex-shrink-0 absolute left-4"
-          >
-            <img src={backIcon} className="w-6 h-6" />
-          </button>
-          <span className="text-center justify-start text-zinc-900 text-lg font-semibold font-['Pretendard']">
-            사담 작성
-          </span>
-        </div>
-      </div>
+      <DetailHeader title="사담 작성" />
 
       {/* 본문 */}
       <main className="flex-1 px-4 py-6 flex flex-col gap-3.5 ">
@@ -110,10 +115,12 @@ export default function PostWrite() {
 
           {/* 입력 영역 */}
           <textarea
+            ref={textareaRef}
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(e) => setContent(e.target.value.slice(0, 500))}
+            maxLength={500}
             placeholder="내용을 작성해 주세요."
-            className="w-full min-h-32 bg-white text-zinc-900 text-sm font-normal font-['Pretendard'] leading-6 placeholder-zinc-400 resize-none border-none outline-none focus:outline-none"
+            className="w-full min-h-32 bg-white text-zinc-900 text-sm font-normal font-['Pretendard'] leading-6 placeholder-zinc-400 resize-none overflow-hidden border-none outline-none focus:outline-none focus:placeholder-transparent caret-rose-900"
           />
         </div>
 
@@ -122,12 +129,15 @@ export default function PostWrite() {
           {content.length}/500
         </div>
 
-        {/* 해시태그 */}
-        <div>
+        {/* 해시 태그 */}
+        <div className="flex flex-col">
           <HashtagInput
             hashtags={hashtags}
             onHashtagsChange={setHashtags}
-            onToast={(message) => console.log(message)}
+            onToast={(message) => {
+              setToast({ message, type: "error" });
+              setTimeout(() => setToast(null), 3000);
+            }}
           />
         </div>
 
@@ -138,17 +148,24 @@ export default function PostWrite() {
       </main>
 
       {/* 제출 버튼 */}
-      <SubmitButton
-        isValid={isFormValid()}
-        isLoading={isLoading}
-        onSubmit={handleSubmit}
-      />
+      <div className="fixed bottom-5 w-[min(100vw,calc(100dvh*9/16))] mx-auto left-1/2 -translate-x-1/2 px-4 z-40">
+        <SubmitButton
+          label="게시하기"
+          isValid={isFormValid()}
+          isLoading={isLoading}
+          onSubmit={handleSubmit}
+          className="relative w-full"
+        />
+      </div>
 
       {/* 성공 모달 */}
       <SuccessModal
         isOpen={showSuccess}
         message="사담을 성공적으로 게시했어요."
       />
+
+      {/* 토스트 메시지 */}
+      <Toast toast={toast} />
     </div>
   );
 }

@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import DetailHeader from "../../components/DetailHeader";
 import SubmitButton from "../../components/SubmitButton";
 import Toast from "../../components/Toast";
+import SuccessModal from "../../components/SuccessModal";
 import removeTextIcon from "../../assets/community/remove-text.svg";
 import Textarea from "./components/Textarea";
-import SuccessModal from "./components/SuccessModal";
 import HashtagInput from "./components/HashtagInput";
 import StarRating from "./components/StarRating";
 import ImageUpload from "./components/ImageUpload";
@@ -61,7 +61,7 @@ export default function ReviewWrite() {
         setShowSuccess(true);
         // 게시글 상세 페이지로 이동
         setTimeout(() => {
-          navigate(`/community/reviews/${data.result.reviewId}`);
+          navigate(`/community/feeds/${data.result.reviewId}/detail`);
         }, 2000);
       } else {
         setToast({

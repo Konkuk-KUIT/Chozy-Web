@@ -1,4 +1,4 @@
-import checkIcon from "../../../assets/community/check.svg";
+import checkIcon from "../assets/community/check.svg";
 
 interface SuccessModalProps {
   isOpen: boolean;
