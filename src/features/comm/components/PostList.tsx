@@ -36,6 +36,7 @@ type PostListProps = {
   fetchFeeds: () => Promise<{ code: number; result: { feeds: any[] } }>;
   emptyVariant?: EmptyVariant;
   emptyText?: string;
+  mapItem?: (raw: any) => FeedItem;
 };
 
 type PostContent = {
@@ -54,6 +55,7 @@ export default function PostList({
   fetchFeeds,
   emptyVariant,
   emptyText,
+  mapItem,
 }: PostListProps) {
   const navigate = useNavigate();
 
@@ -120,8 +122,7 @@ export default function PostList({
       }
 
       const result = data.result;
-      const nextItems = (result.feeds ?? []).map(toUiFeedItem);
-
+      const nextItems = (result.feeds ?? []).map(mapItem ?? toUiFeedItem);
       setItems(nextItems);
     } catch (e) {
       console.error(e);

@@ -127,12 +127,14 @@ export type UiFeedCounts = {
   likes: number;
   dislikes: number;
   quotes: number;
+  views: number;
 };
 
 export type UiFeedMyState = {
   reaction: Reaction;
   isbookmarked: boolean;
   isreposted: boolean;
+  isfollowing?: boolean;
 };
 
 export type UiPostContentDetail = {
@@ -171,17 +173,25 @@ export type UiQuote = {
 export type UiFeedDetail =
   | {
       feedId: number;
-      type: "POST";
+      type: "POST" | "QUOTE" | "REPOST";
+      createdAt: string;
+      isMine: boolean;
+
       user: UiFeedUser;
       content: UiPostContentDetail;
+
       counts: UiFeedCounts;
       myState: UiFeedMyState;
     }
   | {
       feedId: number;
       type: "REVIEW";
+      createdAt: string;
+      isMine: boolean;
+
       user: UiFeedUser;
       content: UiReviewContentDetail;
+
       counts: UiFeedCounts;
       myState: UiFeedMyState;
     };

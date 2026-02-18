@@ -10,10 +10,11 @@ const DEFAULT_MY_STATE = {
 
 export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
   const contentImgs = (s.contents.images ?? [])
+    .slice()
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     .map((img) => img.imageUrl)
     .filter(Boolean);
 
-  // 서버 myState -> UI myState
   const uiMyState = s.myState
     ? {
         reaction: s.myState.reactionType,
@@ -22,7 +23,6 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
       }
     : DEFAULT_MY_STATE;
 
-  // UI 공통 베이스
   const uiBase = {
     feedId: s.feedId,
     kind: s.kind,
@@ -41,7 +41,6 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
     myState: uiMyState,
   } as const;
 
-  // 인용
   const uiQuote = s.contents.quote
     ? {
         feedId: s.contents.quote.feedId,
@@ -55,21 +54,34 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
       }
     : undefined;
 
-  // POST
-  if (s.contentType === "POST") {
+  const text = (s.contents as any).content ?? (s.contents as any).text ?? "";
+
+  const reviewFromObj = (s.contents as any).review ?? null;
+  const reviewFallback =
+    s.contentType === "REVIEW"
+      ? {
+          vendor: (s.contents as any).vendor,
+          title: (s.contents as any).title,
+          rating: (s.contents as any).rating,
+          productUrl: (s.contents as any).productUrl,
+        }
+      : null;
+
+  const review = reviewFromObj ?? reviewFallback;
+  const isReview = s.contentType === "REVIEW" || !!review;
+
+  if (!isReview) {
     return {
       ...uiBase,
       type: "POST",
       content: {
-        text: s.contents.text ?? "",
+        text,
         contentImgs,
         quote: uiQuote,
-      },
+        hashTags: s.contents.quote?.hashTags ?? [],
+      } as any,
     };
   }
-
-  // REVIEW
-  const review = s.contents.review ?? null;
 
   return {
     ...uiBase,
@@ -77,18 +89,21 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
     content: {
       vendor: review?.vendor ?? "",
       title: review?.title ?? "",
-      rating: review?.rating ?? 0,
+      rating: typeof review?.rating === "number" ? review.rating : 0,
       productUrl: review?.productUrl ?? null,
-      text: s.contents.text ?? "",
+
+      text,
       contentImgs,
       quote: uiQuote,
+      hashTags:
+        (s.contents as any).hashTags ?? s.contents.quote?.hashTags ?? [],
 
       ...(uiQuote
         ? {
             quoteContent: {
               vendor: review?.vendor ?? "",
               title: review?.title ?? "",
-              rating: review?.rating ?? 0,
+              rating: typeof review?.rating === "number" ? review.rating : 0,
               productUrl: review?.productUrl ?? null,
               text: uiQuote.text ?? "",
               contentImgs: [],
@@ -100,6 +115,6 @@ export function toUiFeedItem(s: ServerFeedItem): UiFeedItem {
             },
           }
         : {}),
-    },
+    } as any,
   };
 }
