@@ -80,6 +80,7 @@ export default function PostDetail() {
   const [isMine, setIsMine] = useState(false);
 
   const [toast, setToast] = useState<ToastState>(null);
+  const [toastSm, setToastSm] = useState<ToastState>(null);
 
   // 작성일/조회수
   const [createdAtText, setCreatedAtText] = useState("");
@@ -102,6 +103,11 @@ export default function PostDetail() {
   const showToast = (text: string, icon?: string) => {
     setToast({ text, icon });
     window.setTimeout(() => setToast(null), 2000);
+  };
+
+  const showToastSm = (text: string, icon?: string) => {
+    setToastSm({ text, icon });
+    window.setTimeout(() => setToastSm(null), 2000);
   };
 
   const focusInput = () =>
@@ -431,7 +437,6 @@ export default function PostDetail() {
 
         showToast("게시글을 리포스트했어요.", toastmsg);
 
-        // ✅ 서버 값으로 counts / myState 동기화
         await fetchDetail();
         return;
       }
@@ -442,11 +447,46 @@ export default function PostDetail() {
 
       showToast("리포스트를 취소했어요.");
 
-      // ✅ 서버 값으로 counts / myState 동기화
       await fetchDetail();
     } catch (e: any) {
       console.error(e);
       showToast(e?.message ?? "처리 중 오류가 발생했어요.");
+    }
+  };
+
+  // ------------------------------
+  //  공유
+  // ------------------------------
+  const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  const buildShareUrl = (feedId: number) =>
+    `https://chozy.net/community/feeds/${feedId}`;
+
+  const handleShare = async () => {
+    if (!detail) return;
+
+    const url = buildShareUrl(detail.feed.feedId);
+
+    if (isMobile() && navigator.share) {
+      try {
+        await navigator.share({
+          title: "Chozy",
+          text: "게시글 공유",
+          url,
+        });
+        return;
+      } catch (e) {
+        console.log("share cancelled:", e);
+        return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      showToastSm("링크가 복사되었습니다!");
+    } catch (e) {
+      console.error(e);
+      showToastSm("링크 복사에 실패했어요.");
     }
   };
 
@@ -491,6 +531,7 @@ export default function PostDetail() {
             onToggleBookmark={handleToggleBookmark}
             onClickComment={handleClickPostComment}
             onClickQuote={() => setQuoteSheetOpen(true)}
+            onClickShare={() => handleShare()}
           />
         </div>
 
@@ -560,6 +601,15 @@ export default function PostDetail() {
           // navigate(`/community/feeds/${numericFeedId}/quote`);
         }}
       />
+
+      {toastSm && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-[#787878] text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2 animate-fade-in">
+          {toastSm.icon && (
+            <img src={toastSm.icon} alt="" className="w-4 h-4" />
+          )}
+          <span>{toastSm.text}</span>
+        </div>
+      )}
     </div>
   );
 }

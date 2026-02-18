@@ -59,7 +59,6 @@ export default function Followings({ userId, defaultTab }: Props) {
     patch: { isFollowingByMe: boolean; myFollowStatus?: FollowStatus },
   ) => {
     setItems((prev) => {
-      // ✅ 팔로잉 탭에서 언팔(또는 요청취소) 성공하면 즉시 목록에서 제거
       if (
         tab === "followings" &&
         patch.isFollowingByMe === false &&
