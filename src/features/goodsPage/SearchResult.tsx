@@ -38,14 +38,6 @@ type ApiProduct = {
   status: boolean;
 };
 
-type ApiResponse<T> = {
-  isSuccess: boolean;
-  code: number;
-  message: string;
-  timestamp: string;
-  result: T;
-};
-
 const isCategory = (v: string | null): v is ApiCategory =>
   v === "FASHION" ||
   v === "BEAUTY" ||
@@ -91,7 +83,6 @@ export default function SearchResult() {
     .trim();
 
   const category = isCategory(categoryParam) ? categoryParam : null;
-  const search = category ? "" : searchParam;
   const sort = (searchParams.get("sort") ?? "RELEVANCE") as SortKey;
 
   const [productList, setProductList] = useState<ApiProduct[]>([]);
