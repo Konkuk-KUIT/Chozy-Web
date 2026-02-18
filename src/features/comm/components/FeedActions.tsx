@@ -27,6 +27,7 @@ type Props = {
   onToggleBookmark: () => void;
   onClickComment?: () => void;
   onClickQuote?: () => void;
+  onClickShare?: () => void;
 };
 
 export default function FeedActions({
@@ -51,6 +52,7 @@ export default function FeedActions({
   onToggleBookmark,
   onClickComment,
   onClickQuote,
+  onClickShare,
 }: Props) {
   return (
     <div className="px-4 pb-4 pt-2 flex flex-col">
@@ -153,9 +155,16 @@ export default function FeedActions({
             />
           </button>
 
-          <span className="w-6 h-6 flex items-center justify-center shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClickShare?.();
+            }}
+            className="w-6 h-6 flex items-center justify-center shrink-0"
+          >
             <img src={shareIcon} alt="공유" className="w-6 h-6 block" />
-          </span>
+          </button>
         </div>
       </div>
     </div>
