@@ -99,6 +99,7 @@ export default function FeedEtcSheet({
       window.setTimeout(async () => {
         setBlockDoneOpen(false);
         onBlocked?.();
+        navigate("/community", { replace: true });
       }, 900);
     } catch (e: any) {
       console.error("차단 실패:", e);
