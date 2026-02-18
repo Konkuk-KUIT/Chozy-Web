@@ -14,10 +14,6 @@ type ProductProps = {
   imageUrl: string;
   productUrl: string;
 
-  rating: number;
-  reviewCount: number;
-  deliveryFee: number;
-
   status: boolean;
 
   isSoldOut?: boolean;
