@@ -61,7 +61,7 @@ function Home() {
 
   const [popularKeywords, setPopularKeywords] = useState<string[]>([]);
   const [productList, setProductList] = useState<ApiProduct[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingProducts] = useState(false);
 
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(true);
