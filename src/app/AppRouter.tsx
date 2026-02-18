@@ -28,6 +28,7 @@ import WithdrawAccount from "../features/myPage/components/setting/WithdrawAccou
 import WithdrawComplete from "../features/myPage/components/setting/WithdrawComplete";
 import FavoritePage from "../features/favorites/FavoritePage";
 import RequireAuth from "../components/RequireAuth";
+import FollowingsPage from "../features/myPage/FollowingsPage";
 
 export default function AppRouter() {
   return (
@@ -85,6 +86,7 @@ export default function AppRouter() {
       <Route path="/mypage/withdraw/complete" element={<WithdrawComplete />} />
       <Route path="/mypage/service" element={<ServiceTerms />} />
       <Route path="/mypage/privacy" element={<PrivacyPolicy />} />
+      <Route path="/mypage/followings" element={<FollowingsPage />} />
     </Routes>
   );
 }

@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import BottomSheet from "./BottomSheet";
 import SheetRow from "./SheetRow";
 import DeleteConfirmModal from "../../../components/DeleteConfirmModal";
@@ -10,6 +10,8 @@ import blockIcon from "../../../assets/community/block.svg";
 import editIcon from "../../../assets/community/edit.svg";
 import deleteIcon from "../../../assets/community/delete.svg";
 
+import { blockUser } from "../../../api/domains/community/etc/blocks/api";
+
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -17,7 +19,8 @@ type Props = {
 
   // 고정 액션을 위해 필요한 식별자만 받자
   feedId: number;
-  authorUserId: string; // 차단/관심없음 대상이 작성자라면
+  authorUserPk: number;
+  onBlocked?: () => void;
 };
 
 export default function FeedEtcSheet({
@@ -25,11 +28,13 @@ export default function FeedEtcSheet({
   onClose,
   isMine,
   feedId,
-  authorUserId,
+  authorUserPk,
+  onBlocked,
 }: Props) {
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [, setBlockDoneOpen] = useState(false);
 
   const handleEdit = () => {
     onClose();
@@ -45,16 +50,6 @@ export default function FeedEtcSheet({
     onClose();
 
     try {
-      // TODO: API 호출로 게시글 삭제
-      // const res = await deletePost(feedId);
-      // if (res.code === 1000) {
-      //   setShowSuccess(true);
-      //   setTimeout(() => {
-      //     navigate(-1);
-      //   }, 2000);
-      // }
-
-      // 임시로 성공 모달 표시
       setShowSuccess(true);
       setTimeout(() => {
         navigate(-1);
@@ -73,12 +68,29 @@ export default function FeedEtcSheet({
     console.log("not interested", feedId);
   };
 
+  // 차단
   const handleBlock = async () => {
     onClose();
-    const ok = window.confirm(`@${authorUserId} 님을 차단할까요?`);
-    if (!ok) return;
 
-    console.log("block", authorUserId);
+    try {
+      const data = await blockUser(authorUserPk);
+      console.log("blockUser response:", data);
+
+      if (data.code !== 1000) {
+        throw new Error(data.message ?? "차단에 실패했어요.");
+      }
+
+      setBlockDoneOpen(true);
+
+      window.setTimeout(async () => {
+        setBlockDoneOpen(false);
+        onBlocked?.();
+        navigate("/community", { replace: true });
+      }, 900);
+    } catch (e: any) {
+      console.error("차단 실패:", e);
+      alert(e?.message ?? "차단에 실패했어요.");
+    }
   };
 
   return (

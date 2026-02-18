@@ -67,6 +67,7 @@ export default function PostList({
     feedId: number;
     isMine: boolean;
     authorUserId: string;
+    authorUserPk: number;
   } | null>(null);
 
   const hasText = (v: unknown): v is string =>
@@ -246,6 +247,7 @@ export default function PostList({
                       feedId: item.feedId,
                       isMine: (item as any).isMine ?? false,
                       authorUserId: item.user.userId,
+                      authorUserPk: (item.user as any).userPk,
                     });
                     setOpenEtc(true);
                   }}
@@ -532,11 +534,11 @@ export default function PostList({
         open={openEtc}
         onClose={() => {
           setOpenEtc(false);
-          setEtcTarget(null);
         }}
         isMine={etcTarget?.isMine ?? false}
         feedId={etcTarget?.feedId ?? 0}
-        authorUserId={etcTarget?.authorUserId ?? ""}
+        authorUserPk={etcTarget?.authorUserPk ?? 0}
+        onBlocked={loadFeeds}
       />
     </>
   );
