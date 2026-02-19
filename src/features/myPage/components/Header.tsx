@@ -11,6 +11,7 @@ export default function Header() {
         <button
           type="button"
           className="w-10 h-10 flex items-center justify-center rounded-[20px] bg-[rgba(25,25,25,0.4)]"
+          onClick={() => navigate("/mypage/search")}
         >
           <img src={search} alt="검색" />
         </button>
