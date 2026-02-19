@@ -17,6 +17,8 @@ import SearchResult from "../features/goodsPage/SearchResult";
 import ReviewWrite from "../features/comm/ReviewWrite";
 import CommMain from "../features/comm/CommMain";
 import PostDetail from "../features/comm/PostDetail";
+import CommSearchEntry from "../features/comm/search/CommSearchEntry";
+import CommSearchResult from "../features/comm/search/CommSearchResult";
 import MyMain from "../features/myPage/MyMain";
 import EditProfile from "../features/myPage/EditProfile";
 import Notifications from "../features/alerts/Notifications";
@@ -33,6 +35,8 @@ import MyPageSearchEntry from "../features/myPage/MyPageSearchEntry";
 import MyPageSearchResult from "../features/myPage/MyPageSearchResult";
 import RequireAuth from "../components/RequireAuth";
 import FollowingsPage from "../features/myPage/FollowingsPage";
+import CommunitySearchEntryPage from "../features/comm/search/CommSearchEntry";
+import CommunitySearchResultPage from "../features/comm/search/CommSearchResult";
 
 export default function AppRouter() {
   return (
@@ -67,7 +71,14 @@ export default function AppRouter() {
       <Route path="/community" element={<CommMain />} />
       <Route path="/community/feeds/:feedId" element={<PostDetail />} />
       <Route path="/community/post-write" element={<PostWrite />} />
+      <Route path="/community/search" element={<CommSearchEntry />} />
+      <Route path="/community/search/results" element={<CommSearchResult />} />
       <Route path="/review-write" element={<ReviewWrite />} />
+      <Route path="/community/search" element={<CommunitySearchEntryPage />} />
+      <Route
+        path="/community/search/results"
+        element={<CommunitySearchResultPage />}
+      />
 
       {/* 찜 페이지 라우팅 */}
       <Route

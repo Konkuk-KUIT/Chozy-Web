@@ -13,7 +13,12 @@ export default function Header() {
           커뮤니티
         </span>
         <div className="flex flex-row gap-4 items-center justify-center">
-          <button type="button" aria-label="검색" className="w-5 h-5">
+          <button
+            type="button"
+            aria-label="검색"
+            onClick={() => navigate("/community/search")}
+            className="w-5 h-5"
+          >
             <img src={search} alt="search" />
           </button>
           <button
