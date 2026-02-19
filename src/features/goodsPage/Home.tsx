@@ -1,6 +1,6 @@
 // 상품페이지의 메인페이지
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Header from "./components/Header";
 import Nav from "../../components/Nav";
 import Category from "./components/Category";
@@ -69,61 +69,64 @@ function Home() {
   const [loading, setLoading] = useState(false);
 
   // 추천 상품 요청 URL (명세 기반)
-  const loadRecommend = async (nextPage: number) => {
-    if (loading || !hasNext) return;
+  const loadRecommend = useCallback(
+    async (nextPage: number) => {
+      if (loading || !hasNext) return;
 
-    setLoading(true);
-    try {
-      const data = await getRecommendProducts({
-        page: nextPage,
-        size: 20,
-      });
+      setLoading(true);
+      try {
+        const data = await getRecommendProducts({
+          page: nextPage,
+          size: 20,
+        });
 
-      const result = data.result.result;
+        const result = data.result.result;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const mappedItems: ApiProduct[] = (result.items ?? []).map((p: any) => {
+          const raw = p.isFavorited;
 
-      const mappedItems: ApiProduct[] = (result.items ?? []).map((p: any) => {
-        const raw = p.isFavorited;
+          const isFavorited =
+            typeof raw === "boolean"
+              ? raw
+              : typeof raw === "number"
+                ? raw === 1
+                : typeof raw === "string"
+                  ? raw.toLowerCase() === "true"
+                  : false;
 
-        const isFavorited =
-          typeof raw === "boolean"
-            ? raw
-            : typeof raw === "number"
-              ? raw === 1
-              : typeof raw === "string"
-                ? raw.toLowerCase() === "true"
-                : false;
+          return {
+            productId: p.productId,
+            vendor: p.vendor,
+            name: p.name,
+            originalPrice: p.originalPrice,
+            discountRate: p.discountRate,
+            imageUrl: p.imageUrl,
+            productUrl: p.productUrl,
+            status: isFavorited,
+          };
+        });
 
-        return {
-          productId: p.productId,
-          vendor: p.vendor,
-          name: p.name,
-          originalPrice: p.originalPrice,
-          discountRate: p.discountRate,
-          imageUrl: p.imageUrl,
-          productUrl: p.productUrl,
-          status: isFavorited,
-        };
-      });
-      
-      setProductList((prev) => {
-        const next = [...prev, ...mappedItems];
-        const uniq = new Map<number, (typeof next)[number]>();
-        next.forEach((it) => uniq.set(it.productId, it));
-        return Array.from(uniq.values());
-      });
+        setProductList((prev) => {
+          const next = [...prev, ...mappedItems];
+          const uniq = new Map<number, (typeof next)[number]>();
+          next.forEach((it) => uniq.set(it.productId, it));
+          return Array.from(uniq.values());
+        });
 
-      setHasNext(result.hasNext);
-      setPage(result.page);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+        setHasNext(result.hasNext);
+        setPage(result.page);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loading, hasNext],
+  );
 
   useEffect(() => {
     loadRecommend(0);
-  }, []);
+  }, [loadRecommend]);
 
   // 인기 검색어
   useEffect(() => {
@@ -131,6 +134,7 @@ function Home() {
       try {
         const data = await getPopularKeywords();
         setPopularKeywords(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (data.result ?? []).slice(0, 10).map((k: any) => k.keyword),
         );
       } catch (e) {
@@ -157,7 +161,7 @@ function Home() {
     observer.observe(observerRef.current);
 
     return () => observer.disconnect();
-  }, [page, hasNext]);
+  }, [page, hasNext, loadRecommend]);
 
   // 하트 토글(서버 연동 전): status 토글
   const handleToggleLike = async (productId: number) => {

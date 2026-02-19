@@ -6,6 +6,8 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    port: 5173, 
+    strictPort: true, // 포트 사용 중이면 다른 포트로 자동 변경하지 않음
     proxy: {
       "/api": {
         target: "https://chozy.net",

@@ -17,14 +17,15 @@ type GetMyFeedsParams = {
   page?: number; // default 0
   size?: number; // default 20
   sort?: "latest"; // default latest
+  search?: string; // 검색 키워드
 };
 
 export async function getMyFeeds(params: GetMyFeedsParams = {}) {
-  const { page = 0, size = 20, sort = "latest" } = params;
+  const { page = 0, size = 20, sort = "latest", search } = params;
 
   const res = await axiosInstance.get<ApiResponse<MyPageFeedsResult>>(
     "/me/feeds",
-    { params: { page, size, sort } },
+    { params: { page, size, sort, ...(search ? { search } : {}) } },
   );
 
   return res.data;
@@ -34,14 +35,15 @@ export async function getMyFeeds(params: GetMyFeedsParams = {}) {
 type GetMyBookmarksParams = {
   page?: number;
   size?: number;
+  search?: string; // 검색 키워드
 };
 
 export async function getMyBookmarks(params: GetMyBookmarksParams = {}) {
-  const { page = 0, size = 20 } = params;
+  const { page = 0, size = 20, search } = params;
 
   const res = await axiosInstance.get<ApiResponse<MyPageFeedsResult>>(
     "/me/bookmarks",
-    { params: { page, size } },
+    { params: { page, size, ...(search ? { search } : {}) } },
   );
 
   return res.data;
