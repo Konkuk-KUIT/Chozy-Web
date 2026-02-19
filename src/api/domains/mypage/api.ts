@@ -1,6 +1,10 @@
 import axiosInstance from "../../axiosInstance";
 import type { ApiResponse } from "../../client/types";
-import type { MyProfile, MyPageFeedsResult } from "./types";
+import type {
+  MyProfile,
+  MyPageFeedsResult,
+  UpdateProfileRequest,
+} from "./types";
 
 // 프로필 조회
 export async function getMyProfile() {
@@ -40,5 +44,14 @@ export async function getMyBookmarks(params: GetMyBookmarksParams = {}) {
     { params: { page, size } },
   );
 
+  return res.data;
+}
+
+// 프로필 수정
+export async function updateProfile(data: UpdateProfileRequest) {
+  const res = await axiosInstance.patch<ApiResponse<MyProfile>>(
+    "/me/profile",
+    data,
+  );
   return res.data;
 }
