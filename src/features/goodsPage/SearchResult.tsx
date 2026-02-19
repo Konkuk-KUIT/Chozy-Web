@@ -56,7 +56,6 @@ const readNum = (sp: URLSearchParams, key: string) => {
   return Number.isFinite(n) ? n : undefined;
 };
 
-//가격 preset 복원용
 const PRESET_RANGE: Record<PricePresetKey, [number, number]> = {
   under10k: [0, 10000],
   "1to30k": [10000, 30000],
@@ -93,11 +92,9 @@ export default function SearchResult() {
   }, [productList]);
   const [loading, setLoading] = useState(false);
 
-  // 필터 바텀시트 테스트용 상태(DEV ONLY)
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterDefaultTab, setFilterDefaultTab] = useState<FilterTab>("price");
 
-  // URL에서 필터값 읽기
   const minPriceQ = readNum(searchParams, "minPrice");
   const maxPriceQ = readNum(searchParams, "maxPrice");
   const minRatingQ = readNum(searchParams, "minRating");
@@ -157,7 +154,7 @@ export default function SearchResult() {
   // API 요청 URL 생성
   const request = useMemo(() => {
     const base = {
-      sort: sort as any,
+      sort,
       minPrice: minPriceQ,
       maxPrice: maxPriceQ,
       minRating: minRatingQ,
@@ -264,27 +261,31 @@ export default function SearchResult() {
     return () => observer.disconnect();
   }, [hasNext, loading, loadingMore]);
 
-  // 좋아요 토글(서버 연동 전): status 토글
+  // 좋아요 토글(서버 연동): 현재 상태 기반 토글
   const handleToggleLike = async (productId: number) => {
+    // 현재 상태에서 해당 상품 찾기
     const current = productListRef.current.find(
       (p) => p.productId === productId,
     );
     if (!current) return;
 
-    const next = !current.status;
+    const prevStatus = current.status;
+    const nextStatus = !prevStatus;
 
-    // optimistic UI
     setProductList((prev) =>
-      prev.map((p) => (p.productId === productId ? { ...p, status: next } : p)),
+      prev.map((p) =>
+        p.productId === productId ? { ...p, status: nextStatus } : p,
+      ),
     );
 
     try {
-      await setLike(productId, next);
+      // 서버에 새로운 상태 전송
+      await setLike(productId, nextStatus);
     } catch {
-      // rollback
+      // 에러 발생 시 이전 상태로 롤백
       setProductList((prev) =>
         prev.map((p) =>
-          p.productId === productId ? { ...p, status: !next } : p,
+          p.productId === productId ? { ...p, status: prevStatus } : p,
         ),
       );
     }

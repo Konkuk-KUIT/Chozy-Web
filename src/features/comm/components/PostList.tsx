@@ -33,10 +33,13 @@ type EmptyVariant = "community" | "mypage";
 
 type PostListProps = {
   contentType: ContentType;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fetchFeeds: () => Promise<{ code: number; result: { feeds: any[] } }>;
   emptyVariant?: EmptyVariant;
   emptyText?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mapItem?: (raw: any) => FeedItem;
+  searchKeyword?: string;
 };
 
 type PostContent = {
@@ -46,8 +49,49 @@ type PostContent = {
 
 function hasQuote(
   c: PostContent | ReviewContent,
-): c is (ReviewContent | PostContent) & { quote: any } {
-  return "quote" in c && !!(c as any).quote;
+): c is (ReviewContent | PostContent) & { quote: unknown } {
+  return "quote" in c && !!(c as Record<string, unknown>).quote;
+}
+
+function renderHighlighted(text: string, keyword?: string) {
+  if (!keyword || keyword.trim().length === 0) return text;
+
+  const q = keyword.trim();
+  const lowerText = text.toLowerCase();
+  const lowerQ = q.toLowerCase();
+
+  const ranges: Array<{ s: number; e: number }> = [];
+  let from = 0;
+
+  while (true) {
+    const idx = lowerText.indexOf(lowerQ, from);
+    if (idx === -1) break;
+    ranges.push({ s: idx, e: idx + lowerQ.length });
+    from = idx + lowerQ.length;
+  }
+
+  if (ranges.length === 0) return text;
+
+  const nodes: React.ReactNode[] = [];
+  let cursor = 0;
+
+  ranges.forEach((r, i) => {
+    if (cursor < r.s) {
+      nodes.push(<span key={`pre-${i}`}>{text.slice(cursor, r.s)}</span>);
+    }
+    nodes.push(
+      <span key={`hit-${i}`} className="text-[#800020] font-semibold">
+        {text.slice(r.s, r.e)}
+      </span>,
+    );
+    cursor = r.e;
+  });
+
+  if (cursor < text.length) {
+    nodes.push(<span key="tail">{text.slice(cursor)}</span>);
+  }
+
+  return nodes;
 }
 
 export default function PostList({
@@ -56,6 +100,7 @@ export default function PostList({
   emptyVariant,
   emptyText,
   mapItem,
+  searchKeyword,
 }: PostListProps) {
   const navigate = useNavigate();
 
@@ -75,21 +120,19 @@ export default function PostList({
   const hasNumber = (v: unknown): v is number =>
     typeof v === "number" && Number.isFinite(v);
 
-  // 공유
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
   const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   const buildShareUrl = (feedId: number) => {
-    // 배포 링크 고정(원하면 window.location.origin로 변경 가능)
+    // 배포 링크 고정
     return `https://chozy.net/community/feeds/${feedId}`;
   };
 
   const handleShare = async (feedId: number) => {
     const url = buildShareUrl(feedId);
 
-    // ✅ 폰 + Web Share 지원이면 -> OS 공유 시트
     if (isMobile() && navigator.share) {
       try {
         await navigator.share({
@@ -105,7 +148,6 @@ export default function PostList({
       }
     }
 
-    // ✅ PC(또는 미지원) -> 바텀시트(링크복사)
     setShareUrl(url);
     setShareOpen(true);
   };
@@ -134,7 +176,8 @@ export default function PostList({
 
   useEffect(() => {
     loadFeeds();
-  }, [fetchFeeds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 게시글 좋아요/싫어요 토글
   const handleToggleReaction = async (feedId: number, like: boolean) => {
@@ -174,12 +217,22 @@ export default function PostList({
     }
   };
 
-  // NOTE: 서버가 contentType 필터링을 이미 해줄 수 있지만,
-  // UI에서 한 번 더 안전하게 필터링
-  const filteredItems = items.filter((item) => {
-    if (contentType === "ALL") return true;
-    return item.type === contentType;
-  });
+  const filteredItems = items
+    .filter((item) => {
+      if (contentType === "ALL") return true;
+      return item.type === contentType;
+    })
+    .filter((item) => {
+      // 검색 키워드가 있으면 본문, 제목에서 검색
+      if (!searchKeyword || searchKeyword.trim().length === 0) return true;
+
+      const keyword = searchKeyword.trim().toLowerCase();
+      const text = item.content.text?.toLowerCase() ?? "";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const title = (item.content as any).title?.toLowerCase() ?? "";
+
+      return text.includes(keyword) || title.includes(keyword);
+    });
 
   if (loading) return <div className="px-4 py-3">로딩중...</div>;
 
@@ -206,22 +259,22 @@ export default function PostList({
       <div className="flex flex-col gap-1">
         {filteredItems.map((item) => {
           console.log("feedId", item.feedId, {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             kind: (item as any).kind,
             hasQuote: hasQuote(item.content),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             quoteContent: (item as any).content?.quoteContent,
           });
 
-          const isQuoted =
-            (item as any).kind === "QUOTE" || (item as any).kind === "REPOST";
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const isQuoted = (item as any).kind === "QUOTE" || (item as any).kind === "REPOST";
 
           return (
             <div
               key={item.feedId}
-              role="button"
               onClick={() => navigate(`/community/feeds/${item.feedId}`)}
               className="px-[8px] py-3 bg-white"
             >
-              {/* 프로필 */}
               <div className="flex flex-row justify-between">
                 <div className="flex flex-row gap-[8px] mb-[8px]">
                   <img
@@ -244,6 +297,7 @@ export default function PostList({
                     e.stopPropagation();
                     setEtcTarget({
                       feedId: item.feedId,
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       isMine: (item as any).isMine ?? false,
                       authorUserId: item.user.userId,
                     });
@@ -254,7 +308,6 @@ export default function PostList({
                 </button>
               </div>
 
-              {/* 리뷰일 때만 */}
               {item.type === "REVIEW" && (
                 <div className="mb-3">
                   <div className="flex flex-row gap-1 mb-1">
@@ -270,10 +323,10 @@ export default function PostList({
                           onClick={(e) => e.stopPropagation()}
                           className="underline underline-offset-2"
                         >
-                          {item.content.title}
+                          {renderHighlighted(item.content.title, searchKeyword)}
                         </a>
                       ) : (
-                        item.content.title
+                        renderHighlighted(item.content.title, searchKeyword)
                       )}
                     </span>
                   </div>
@@ -286,10 +339,9 @@ export default function PostList({
                 </div>
               )}
 
-              {/* 본문 */}
               <div className="flex flex-col gap-3">
                 <div className="text-[14px] line-clamp-3 whitespace-pre-line">
-                  {item.content.text}
+                  {renderHighlighted(item.content.text, searchKeyword)}
                 </div>
                 {!!(item.content.contentImgs ?? []).filter(Boolean).length && (
                   <div className="mt-3 flex gap-[2px] overflow-x-auto scrollbar-hide">
@@ -302,11 +354,11 @@ export default function PostList({
                 )}
               </div>
 
-              {/* 인용 글일 경우 */}
               {isQuoted &&
                 hasQuote(item.content) &&
                 (() => {
-                  const q = item.content.quote;
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const q = item.content.quote as any;
                   const hasAny =
                     hasText(q?.text) ||
                     hasText(q?.vendor) ||
@@ -319,7 +371,6 @@ export default function PostList({
                   return (
                     <div
                       className="cursor-pointer mt-5 rounded-[4px] border border-[#DADADA] px-2 mx-3 py-3"
-                      role="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         if (typeof q.feedId === "number") {
@@ -347,7 +398,6 @@ export default function PostList({
                         </div>
                       </div>
 
-                      {/* vendor / title: 있는 것만 */}
                       {(hasText(q.vendor) || hasText(q.title)) && (
                         <div className="flex flex-row gap-1 mb-1">
                           {hasText(q.vendor) && (
@@ -363,7 +413,6 @@ export default function PostList({
                         </div>
                       )}
 
-                      {/* rating: 있을 때만 */}
                       {hasNumber(q.rating) && (
                         <div className="flex flex-row gap-1">
                           <StarRating rating={q.rating} />
@@ -373,14 +422,12 @@ export default function PostList({
                         </div>
                       )}
 
-                      {/* text: 있을 때만 */}
                       {hasText(q.text) && (
                         <p className="text-[14px] line-clamp-4 whitespace-pre-line mt-2">
                           {q.text}
                         </p>
                       )}
 
-                      {/* images: 있을 때만 */}
                       {!!q.contentImgs?.filter(Boolean).length && (
                         <div className="mt-3 flex gap-[2px] overflow-x-auto scrollbar-hide">
                           {q.contentImgs
@@ -399,10 +446,9 @@ export default function PostList({
                   );
                 })()}
 
-              {/* 포스트 상태바 */}
               <div className="pl-1 flex items-center justify-between mt-5">
                 <div className="flex gap-3">
-                  {/* 댓글 */}
+
                   <button
                     type="button"
                     onClick={(e) => e.stopPropagation()}
@@ -420,7 +466,6 @@ export default function PostList({
                     </span>
                   </button>
 
-                  {/* 인용 */}
                   <button
                     type="button"
                     onClick={(e) => e.stopPropagation()}
@@ -438,7 +483,6 @@ export default function PostList({
                     </span>
                   </button>
 
-                  {/* 좋아요 */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -461,7 +505,6 @@ export default function PostList({
                     </span>
                   </button>
 
-                  {/* 싫어요 */}
                   <button
                     type="button"
                     onClick={(e) => {
@@ -485,7 +528,6 @@ export default function PostList({
                   </button>
                 </div>
 
-                {/* 북마크 + 공유 */}
                 <div className="flex gap-[8px]">
                   <button
                     type="button"
