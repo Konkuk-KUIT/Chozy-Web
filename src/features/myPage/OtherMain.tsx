@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import Nav from "../../components/Nav";
 import Header from "./components/Header";
 
@@ -15,7 +15,7 @@ import {
 } from "../../api/domains/mypage/otherProfile";
 
 export default function OtherMain() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const { userId } = useParams<{ userId: string }>();
