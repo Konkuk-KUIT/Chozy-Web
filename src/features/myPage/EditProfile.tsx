@@ -6,6 +6,7 @@ import SubmitButton from "../../components/SubmitButton";
 import Toast from "../../components/Toast";
 import defaultProfile from "../../assets/mypage/defaultProfile.svg";
 import bgLogo from "../../assets/mypage/bgLogo.svg";
+import pencil from "../../assets/mypage/pencil.svg";
 
 export default function EditProfile() {
   const navigate = useNavigate();
@@ -13,7 +14,6 @@ export default function EditProfile() {
   const backgroundImageInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [profile, setProfile] = useState<mypageApi.MyProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
@@ -31,14 +31,11 @@ export default function EditProfile() {
     backgroundImageUrl: "",
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, setProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(
     null,
   );
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   const [, setBackgroundImage] = useState<File | null>(null);
   const [backgroundImagePreview, setBackgroundImagePreview] = useState<
     string | null
@@ -271,26 +268,24 @@ export default function EditProfile() {
               +
             </button>
           </div>
-        </div>
 
-        {/* Form Content */}
-        <div className="pt-[40px] px-4 pb-6 space-y-6">
           {/* 상태 메시지 */}
-          <div>
-            <label className="block text-[12px] font-medium text-[#191919] mb-2">
-              상태
-            </label>
-            <textarea
+          <div className="absolute left-4 top-40 z-20 flex items-center gap-2 w-[calc(100%-32px)]">
+            <img src={pencil} alt="연필" className="w-4 h-4 shrink-0" />
+            <input
+              type="text"
               value={formData.statusMessage}
               onChange={(e) =>
                 handleTextChange("statusMessage", e.target.value)
               }
-              placeholder="상태 메시지를 입력해주세요"
-              className="w-full px-3 py-2 border border-[#E5E5E5] rounded-lg text-[14px] text-[#191919] placeholder-[#B5B5B5] focus:outline-none focus:border-[#800025] resize-none"
-              rows={2}
+              placeholder="지금의 상태를 한 줄로 적어봐요!"
+              className="flex-1 px-0 py-0 border-0 bg-transparent text-[14px] text-white placeholder-white/70 focus:outline-none"
             />
           </div>
+        </div>
 
+        {/* Form Content */}
+        <div className="pt-[40px] px-4 pb-6 space-y-6">
           {/* 아이디 */}
           <div>
             <div className="flex items-center gap-1 mb-2">
