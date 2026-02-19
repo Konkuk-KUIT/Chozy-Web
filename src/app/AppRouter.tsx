@@ -27,6 +27,10 @@ import BlockedAccounts from "../features/myPage/components/setting/BlockedAccoun
 import WithdrawAccount from "../features/myPage/components/setting/WithdrawAccount";
 import WithdrawComplete from "../features/myPage/components/setting/WithdrawComplete";
 import FavoritePage from "../features/favorites/FavoritePage";
+import FavoriteSearchEntry from "../features/favorites/FavoriteSearchEntry";
+import FavoriteSearchResult from "../features/favorites/FavoriteSearchResult";
+import MyPageSearchEntry from "../features/myPage/MyPageSearchEntry";
+import MyPageSearchResult from "../features/myPage/MyPageSearchResult";
 import RequireAuth from "../components/RequireAuth";
 import FollowingsPage from "../features/myPage/FollowingsPage";
 
@@ -74,10 +78,42 @@ export default function AppRouter() {
           </RequireAuth>
         }
       />
+      <Route
+        path="/heart/search"
+        element={
+          <RequireAuth>
+            <FavoriteSearchEntry />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/heart/search/results"
+        element={
+          <RequireAuth>
+            <FavoriteSearchResult />
+          </RequireAuth>
+        }
+      />
 
       {/* 개인 페이지 라우팅 */}
       <Route path="/mypage" element={<MyMain />} />
       <Route path="/mypage/edit" element={<EditProfile />} />
+      <Route
+        path="/mypage/search"
+        element={
+          <RequireAuth>
+            <MyPageSearchEntry />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/mypage/search/results"
+        element={
+          <RequireAuth>
+            <MyPageSearchResult />
+          </RequireAuth>
+        }
+      />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/mypage/setting" element={<Setting />} />
       <Route path="/mypage/likepost" element={<LikePost />} />
