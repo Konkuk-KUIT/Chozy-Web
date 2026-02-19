@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Onboarding from "../features/login/Onboarding";
 import Login from "../features/login/Login";
 import KakaoCallback from "../features/login/KakaoCallback";
+import NaverCallback from "../features/login/NaverCallback";
 import Terms from "../features/login/Terms";
 import ServiceTerms from "../features/login/ServiceTerms";
 import PrivacyPolicy from "../features/login/PrivacyPolicy";
@@ -24,6 +25,7 @@ import EditProfile from "../features/myPage/EditProfile";
 import Notifications from "../features/alerts/Notifications";
 import Setting from "../features/myPage/components/Setting";
 import PostWrite from "../features/comm/PostWrite";
+import QuoteWrite from "../features/comm/QuoteWrite";
 import LikePost from "../features/myPage/components/setting/LikePost";
 import BlockedAccounts from "../features/myPage/components/setting/BlockedAccounts";
 import WithdrawAccount from "../features/myPage/components/setting/WithdrawAccount";
@@ -35,6 +37,7 @@ import MyPageSearchEntry from "../features/myPage/MyPageSearchEntry";
 import MyPageSearchResult from "../features/myPage/MyPageSearchResult";
 import RequireAuth from "../components/RequireAuth";
 import FollowingsPage from "../features/myPage/FollowingsPage";
+import OtherMain from "../features/myPage/OtherMain";
 import CommunitySearchEntryPage from "../features/comm/search/CommSearchEntry";
 import CommunitySearchResultPage from "../features/comm/search/CommSearchResult";
 
@@ -47,6 +50,7 @@ export default function AppRouter() {
       {/* 로그인 페이지 라우팅 */}
       <Route path="/login" element={<Login />} />
       <Route path="/auth/kakao/callback" element={<KakaoCallback />} />
+      <Route path="/auth/naver/callback" element={<NaverCallback />} />
       <Route path="/login/terms" element={<Terms />} />
       <Route path="/login/terms/service" element={<ServiceTerms />} />
       <Route path="/login/terms/privacy" element={<PrivacyPolicy />} />
@@ -70,6 +74,7 @@ export default function AppRouter() {
       {/* 커뮤니티 페이지 라우팅 */}
       <Route path="/community" element={<CommMain />} />
       <Route path="/community/feeds/:feedId" element={<PostDetail />} />
+      <Route path="/community/feeds/:feedId/quote" element={<QuoteWrite />} />
       <Route path="/community/post-write" element={<PostWrite />} />
       <Route path="/community/search" element={<CommSearchEntry />} />
       <Route path="/community/search/results" element={<CommSearchResult />} />
@@ -108,6 +113,7 @@ export default function AppRouter() {
 
       {/* 개인 페이지 라우팅 */}
       <Route path="/mypage" element={<MyMain />} />
+      <Route path="/otherpage/:userId" element={<OtherMain />} />
       <Route path="/mypage/edit" element={<EditProfile />} />
       <Route
         path="/mypage/search"
