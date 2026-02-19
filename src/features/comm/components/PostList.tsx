@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import StarRating from "./StarRating";
 import ShareBottomSheet from "./ShareBottomSheet";
 import FeedEtcSheet from "./FeedEtcSheet";
+import FeedQuoteSheet from "./FeedQuoteSheet";
 
 import comment from "../../../assets/community/comment.svg";
 import quotation from "../../../assets/community/quotation.svg";
@@ -17,6 +18,7 @@ import share from "../../../assets/community/repost.svg";
 import load from "../../../assets/community/loading.svg";
 import etc from "../../../assets/community/etc.svg";
 import dummyProfile from "../../../assets/all/dummyProfile.svg";
+import completeRepostIcon from "../../../assets/community/completeRepost.svg";
 
 import { toUiFeedItem } from "../../../api/domains/mypage/mapper";
 import type {
@@ -26,6 +28,10 @@ import type {
 import {
   toggleFeedReaction,
   toggleFeedBookmark,
+} from "../../../api/domains/community/actions";
+import {
+  createRepost,
+  deleteRepost,
 } from "../../../api/domains/community/actions";
 
 type ContentType = "ALL" | "POST" | "REVIEW";
@@ -61,6 +67,15 @@ export default function PostList({
 
   const [items, setItems] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<{
+    text: string;
+    icon?: string;
+  } | null>(null);
+
+  const showToast = (text: string, icon?: string) => {
+    setToast({ text, icon });
+    window.setTimeout(() => setToast(null), 2000);
+  };
 
   const [openEtc, setOpenEtc] = useState(false);
   const [etcTarget, setEtcTarget] = useState<{
@@ -70,6 +85,12 @@ export default function PostList({
     authorUserPk: number;
   } | null>(null);
 
+  // 인용 바텀시트
+  const [quoteSheetOpen, setQuoteSheetOpen] = useState(false);
+  const [quoteTargetFeedId, setQuoteTargetFeedId] = useState<number | null>(
+    null,
+  );
+
   const hasText = (v: unknown): v is string =>
     typeof v === "string" && v.trim().length > 0;
 
@@ -78,19 +99,18 @@ export default function PostList({
 
   // 공유
   const [shareOpen, setShareOpen] = useState(false);
-  const [shareUrl, setShareUrl] = useState("");
+  const [shareUrl] = useState("");
 
   const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   const buildShareUrl = (feedId: number) => {
-    // 배포 링크 고정(원하면 window.location.origin로 변경 가능)
     return `https://chozy.net/community/feeds/${feedId}`;
   };
 
   const handleShare = async (feedId: number) => {
     const url = buildShareUrl(feedId);
 
-    // ✅ 폰 + Web Share 지원이면 -> OS 공유 시트
+    // 모바일 + Web Share API 지원
     if (isMobile() && navigator.share) {
       try {
         await navigator.share({
@@ -100,15 +120,20 @@ export default function PostList({
         });
         return;
       } catch (e) {
-        // 취소해도 정상 흐름
-        console.log("share cancelled/failed:", e);
+        console.log("share cancelled:", e);
         return;
       }
     }
 
-    // ✅ PC(또는 미지원) -> 바텀시트(링크복사)
-    setShareUrl(url);
-    setShareOpen(true);
+    // PC 또는 Web Share 미지원 → 클립보드 복사
+    try {
+      await navigator.clipboard.writeText(url);
+
+      showToast("링크가 복사되었습니다!");
+    } catch (e) {
+      console.error(e);
+      showToast("링크 복사에 실패했어요.");
+    }
   };
 
   // 게시글 목록 조회
@@ -201,6 +226,37 @@ export default function PostList({
       </div>
     );
   }
+
+  // 리포스트
+  const targetItem = quoteTargetFeedId
+    ? items.find((it) => it.feedId === quoteTargetFeedId)
+    : undefined;
+
+  const isReposted = targetItem?.myState?.isreposted ?? false;
+
+  const handleToggleRepost = async () => {
+    if (!quoteTargetFeedId) return;
+
+    if (!localStorage.getItem("accessToken")) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      if (!isReposted) {
+        const res = await createRepost(quoteTargetFeedId);
+        if (res.code !== 1000) throw new Error(res.message ?? "리포스트 실패");
+      } else {
+        const res = await deleteRepost(quoteTargetFeedId);
+        if (res.code !== 1000)
+          throw new Error(res.message ?? "리포스트 취소 실패");
+      }
+
+      await loadFeeds();
+    } catch (e: any) {
+      console.error(e);
+    }
+  };
 
   return (
     <>
@@ -425,16 +481,25 @@ export default function PostList({
                   {/* 인용 */}
                   <button
                     type="button"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setQuoteTargetFeedId(item.feedId);
+                      setQuoteSheetOpen(true);
+                    }}
                     className="flex items-center gap-[3px] leading-none"
                   >
                     <span className="w-6 h-6 flex items-center justify-center shrink-0">
                       <img
-                        src={quotation}
+                        src={
+                          item.myState.isreposted
+                            ? completeRepostIcon
+                            : quotation
+                        }
                         alt="인용수"
                         className="w-6 h-6 block"
                       />
                     </span>
+
                     <span className="text-[13px] leading-none">
                       {item.counts.quotes}
                     </span>
@@ -540,6 +605,24 @@ export default function PostList({
         authorUserPk={etcTarget?.authorUserPk ?? 0}
         onBlocked={loadFeeds}
       />
+
+      <FeedQuoteSheet
+        open={quoteSheetOpen}
+        onClose={() => setQuoteSheetOpen(false)}
+        isReposted={isReposted}
+        onRepost={handleToggleRepost}
+        onQuote={() => {
+          // TODO: 인용 작성 화면으로 이동
+          // navigate(`/community/feeds/${numericFeedId}/quote`);
+        }}
+      />
+
+      {toast && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-[#787878] text-white px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+          {toast.icon && <img src={toast.icon} alt="" className="w-4 h-4" />}
+          <span>{toast.text}</span>
+        </div>
+      )}
     </>
   );
 }

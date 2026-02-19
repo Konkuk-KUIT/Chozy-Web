@@ -3,8 +3,6 @@ import DetailHeader from "../../../components/DetailHeader";
 import FollowTabBar from "./followings/FollowTabBar";
 import type { FollowTabKey } from "./followings/FollowTabBar";
 
-import toastmsg from "../../../assets/community/toastmsg.svg";
-
 import FollowAccount from "./followings/FollowAccount"; // 경로 맞게 수정
 import type { FollowStatus } from "./followings/FollowAccount";
 
@@ -61,7 +59,6 @@ export default function Followings({ userId, defaultTab }: Props) {
     patch: { isFollowingByMe: boolean; myFollowStatus?: FollowStatus },
   ) => {
     setItems((prev) => {
-      // ✅ 팔로잉 탭에서 언팔(또는 요청취소) 성공하면 즉시 목록에서 제거
       if (
         tab === "followings" &&
         patch.isFollowingByMe === false &&

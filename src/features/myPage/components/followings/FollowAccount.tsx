@@ -44,18 +44,12 @@ export default function FollowAccount({
   const [loading, setLoading] = useState(false);
 
   const isRequested = myFollowStatus === "REQUESTED";
-  const isMutualCandidate = !isFollowingByMe && isFollowingMe; // ✅ 추가
+  const isMutualCandidate = !isFollowingByMe && isFollowingMe;
   const isFollowingLike =
-    !isMutualCandidate && (isFollowingByMe || isRequested); // ✅ 교체
+    !isMutualCandidate && (isFollowingByMe || isRequested);
 
   const displayId = userID.startsWith("@") ? userID : `@${userID}`;
 
-  // ✅ 라벨 규칙
-  // - followings 탭: 기본은 "팔로우 중", REQUESTED면 "요청중"
-  // - followers 탭:
-  //    - 내가 팔로우 중이면 "팔로우 중" (REQUESTED면 "요청중")
-  //    - 내가 팔로우 안 했고 상대가 나를 팔로우 중이면 "맞팔로우"
-  //    - 그 외 "팔로우"
   const label =
     variant === "followings"
       ? isRequested
@@ -74,7 +68,6 @@ export default function FollowAccount({
     setLoading(true);
 
     try {
-      // ✅ 이미 팔로우 중이거나 요청중이면 -> 취소(언팔/요청취소)
       if (isFollowingByMe || isRequested) {
         const res = await unfollowUser(userPk);
         if (res.code !== 1000)
@@ -88,7 +81,6 @@ export default function FollowAccount({
         return;
       }
 
-      // ✅ 팔로우(또는 비공개면 요청)
       const res = await followUser(userPk);
       if (res.code !== 1000) throw new Error(res.message ?? "팔로우 실패");
 
