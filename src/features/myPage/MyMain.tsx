@@ -47,6 +47,14 @@ function MyMain() {
     setTab(next);
   };
 
+  const handleEditProfile = () => {
+    if (!profile?.loginId) {
+      navigate("/login");
+      return;
+    }
+    navigate("/mypage/edit");
+  };
+
   const isLoggedIn = !!profile?.loginId;
   const bgUrl = profile?.backgroundImageUrl ?? null; // 배경사진 있으면 그걸 쓰고 없으면 기본
   const profileImg = profile?.profileImageUrl ?? null;
@@ -128,7 +136,8 @@ function MyMain() {
             <div className="mt-4 flex items-center gap-5">
               <button
                 type="button"
-                className="h-8 ml-4 px-2 py-1 rounded-[4px] bg-[#F9F9F9] text-[#575757] text-[14px] font-medium"
+                onClick={handleEditProfile}
+                className="h-8 ml-4 px-2 py-1 rounded-[4px] bg-[#F9F9F9] text-[#575757] text-[14px] font-medium hover:bg-[#F0F0F0] transition-colors"
               >
                 프로필 수정
               </button>

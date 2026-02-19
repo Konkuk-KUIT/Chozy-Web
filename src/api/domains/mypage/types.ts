@@ -69,3 +69,18 @@ export type MyPageFeedsResult = {
   totalPages: number;
   hasNext: boolean;
 };
+
+// 프로필 수정
+export type UpdateProfileRequest = {
+  nickname: string;
+  statusMessage?: string | null;
+  isAccountPublic?: boolean;
+  birthDate?: string;
+  heightCm?: number;
+  weightKg?: number;
+  isBirthPublic?: boolean;
+  isHeightPublic?: boolean;
+  isWeightPublic?: boolean;
+  profileImageUrl?: string | null;
+  backgroundImageUrl?: string | null;
+};
