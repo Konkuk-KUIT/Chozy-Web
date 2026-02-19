@@ -38,7 +38,6 @@ export async function getLikes(query: LikesQuery = {}): Promise<LikeItem[]> {
   const page = query.page ?? 0;
   const size = query.size ?? 100;
 
-  // 1안: flat query
   const { data } = await axiosInstance.get<LikesResponse>("/likes", {
     params: { userId, search, page, size },
   });
