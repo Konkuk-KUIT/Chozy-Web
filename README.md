@@ -24,5 +24,4 @@ Chozy 웹 프론트엔드 레포지토리입니다.
 <img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/80ca49da-4bea-4d40-8449-ae7f29064efe" />
 <img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/224fa0e8-7511-4fcb-8bb6-db60e55726fe" />
 <img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/56ae64e7-4d53-4408-8ece-e134293d0b92" />
-<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/a63bdacd-68af-4d0c-8bf7-50f88de53e2f" />
-
+<img width="3840" height="2160" alt="image" src="https://github.com/user-attachments/assets/56b273d3-d665-4319-b99d-cb48831cb8c7" />
